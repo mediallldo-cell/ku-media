@@ -86,10 +86,17 @@ function create_(b){
   if(b.end<=b.start)throw Error('เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น');
   const lock=LockService.getScriptLock();lock.waitLock(12000);
   try{
-    const clashes=all_().filter(x=>x.date===b.date&&['Approved / Quoted','In Progress'].includes(x.status)&&x.start<b.end&&x.end>b.start&&x.services.some(s=>b.services.includes(s)));
+    const sh=sheet_(),lastRow=sh.getLastRow(),clashes=[];
+    if(lastRow>1){
+      const rows=sh.getRange(2,7,lastRow-1,17).getValues();
+      rows.forEach(r=>{
+        const status=r[16],services=parse_(r[7]);
+        if(dateString_(r[0])===b.date&&['Approved / Quoted','In Progress'].includes(status)&&timeString_(r[4])<b.end&&timeString_(r[5])>b.start&&services.some(s=>b.services.includes(s)))clashes.push(r);
+      });
+    }
     if(clashes.length)throw Error('ช่วงเวลานี้มีรายการที่อนุมัติแล้ว กรุณาติดต่อเจ้าหน้าที่หรือเลือกเวลาใหม่');
     b.status='Pending';
-    sheet_().appendRow([b.id,b.createdAt,b.name,b.department||'',b.phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','']);
+    sh.appendRow([b.id,b.createdAt,b.name,b.department||'',b.phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','']);
     // Queue the PDF and email; do not make the applicant wait for Gmail/Drive.
     const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
     ss.getSheetByName('MailQueue').appendRow([new Date(),b.id,b.email,'newBooking','QUEUED','']);
@@ -177,12 +184,14 @@ function updateStatus_(q){
   const actor=auth_(q.token);if(!STATUSES.includes(q.status))throw Error('สถานะไม่ถูกต้อง');
   const sh=sheet_(),v=sh.getDataRange().getValues(),i=v.findIndex((r,n)=>n>0&&String(r[0])===String(q.id));if(i<1)throw Error('ไม่พบคำขอ');
   sh.getRange(i+1,23).setValue(q.status);sh.getRange(i+1,24).setValue(q.adminNote||'');
-  const email=v[i][5],name=v[i][2];let receiptUrl='';
+  const b=all_().find(x=>x.id===q.id);if(!b)throw Error('ไม่พบคำขอ');
+  let receiptUrl='';
   if(q.status==='Completed'){
-    const b=all_().find(x=>x.id===q.id);const pdf=makePdf_(b,'สรุปผลการให้บริการ');receiptUrl=pdf.getUrl();sh.getRange(i+1,26).setValue(receiptUrl);
+    const pdf=makePdf_(b,'สรุปผลการให้บริการ');receiptUrl=pdf.getUrl();sh.getRange(i+1,26).setValue(receiptUrl);b.receiptUrl=receiptUrl;
   }
-  MailApp.sendEmail({to:email,subject:'อัปเดตสถานะคำขอ '+q.id,body:'เรียน '+name+'\\nสถานะคำขอของท่าน: '+q.status+'\\n'+(q.adminNote||'')+'\\n'+(receiptUrl?'เอกสารสรุป: '+receiptUrl:'')});
-  notifyAdmins_('อัปเดตสถานะ '+q.id,'โดย '+actor+' เป็น '+q.status);
+  const statusLabel=statusLabel_(q.status),note=String(q.adminNote||'');
+  MailApp.sendEmail({to:b.email,subject:'อัปเดตสถานะคำขอ '+q.id+' | บริการผลิตและบริการสื่อ มก.',body:'เรียน คุณ'+b.name+'\\nระบบได้อัปเดตสถานะคำขอของท่านแล้ว\\nหมายเลขคำขอ: '+q.id+'\\nสถานะ: '+statusLabel+(note?'\\nข้อความจากเจ้าหน้าที่: '+note:'')+(receiptUrl?'\\nเอกสารสรุปผล: '+receiptUrl:''),htmlBody:emailHtml_(b,receiptUrl,false,{status:q.status,adminNote:note}),name:'KU Media Service'});
+  notifyAdmins_('อัปเดตสถานะ '+q.id,'โดย '+actor+' เป็น '+statusLabel);
   return {ok:true,receiptUrl};
 }
 function processMailQueue_(){
@@ -200,11 +209,21 @@ function processMailQueue_(){
     }catch(err){q.getRange(row,5).setValue('ERROR');q.getRange(row,6).setValue(String(err.message||err).slice(0,500));}
   }
 }
-function emailHtml_(b,pdfUrl,adminCopy){
-  const esc=escapeHtml_;const service=(b.serviceNames||[]).map(esc).join(' · ')||'—';
-  const field=(label,value)=>'<tr><td style="padding:11px 14px;color:#64748b;width:34%;border-bottom:1px solid #e8edf3">'+label+'</td><td style="padding:11px 14px;color:#172b45;font-weight:600;border-bottom:1px solid #e8edf3">'+esc(value||'—')+'</td></tr>';
-  const greeting=adminCopy?'มีคำขอใช้บริการผลิตและบริการสื่อรายการใหม่':'ระบบได้รับคำขอใช้บริการของท่านเรียบร้อยแล้ว';
-  return '<div style="margin:0;background:#f2f5f9;padding:28px 12px;font-family:Arial,Tahoma,sans-serif;color:#172b45"><table role="presentation" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e1e8f0"><tr><td style="padding:26px 30px;background:linear-gradient(120deg,#102d4f,#1d5688);border-bottom:5px solid #d9ad55;color:#fff"><div style="font-size:12px;letter-spacing:1px;color:#dbe8f4">KASETSART UNIVERSITY</div><div style="font-size:22px;font-weight:700;margin-top:7px">รับคำขอใช้บริการผลิตและบริการสื่อ</div><div style="font-size:13px;color:#e3edf6;margin-top:5px">สำนักพัฒนาการเรียนรู้ตลอดชีวิต มหาวิทยาลัยเกษตรศาสตร์</div></td></tr><tr><td style="padding:28px 30px 12px"><div style="font-size:17px;font-weight:700;color:#102d4f">'+greeting+'</div><p style="font-size:14px;line-height:1.8;color:#526276">'+(adminCopy?'โปรดตรวจสอบรายละเอียดและดำเนินการตามขั้นตอน':'เรียน คุณ'+esc(b.name)+' ขอบคุณที่ส่งคำขอผ่านระบบออนไลน์')+'</p><div style="background:#eef4fa;border:1px solid #dbe7f2;border-radius:12px;padding:17px 20px;margin:18px 0"><div style="font-size:12px;color:#61758a">หมายเลขคำขอ</div><div style="font-size:25px;letter-spacing:1px;font-weight:700;color:#174b78;margin-top:4px">'+esc(b.id)+'</div><span style="display:inline-block;margin-top:10px;background:#fff2d6;color:#8a6113;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700">รอเจ้าหน้าที่ตรวจสอบ</span></div><div style="font-size:15px;font-weight:700;color:#102d4f;margin:20px 0 8px">รายละเอียดคำขอ</div><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8edf3;border-radius:10px;overflow:hidden">'+field('ชื่อผู้ขอ',b.name)+field('หน่วยงาน',b.department)+field('โทรศัพท์',b.phone)+field('อีเมล',b.email)+field('กิจกรรม',b.event)+field('วันที่ใช้บริการ',b.date)+field('เวลา',b.start+' – '+b.end)+field('สถานที่',b.location)+field('บริการที่เลือก',service)+field('ประมาณการค่าใช้จ่าย',Number(b.estimate||0).toLocaleString('th-TH')+' บาท')+'</table>'+(pdfUrl?'<div style="text-align:center;margin:24px 0"><a href="'+pdfUrl+'" style="display:inline-block;background:#d9ad55;color:#172b45;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px">เปิดเอกสารสรุปคำขอ</a></div>':'')+'<p style="font-size:12px;line-height:1.8;color:#718096">หมายเหตุ: ยอดดังกล่าวเป็นเพียงประมาณการ การให้บริการและค่าใช้จ่ายจะได้รับการยืนยันจากเจ้าหน้าที่อีกครั้ง กรุณาเก็บหมายเลขคำขอนี้ไว้เพื่อติดตามสถานะ</p></td></tr><tr><td style="padding:18px 30px;background:#f7f9fc;border-top:1px solid #e8edf3;font-size:11px;line-height:1.7;color:#718096">สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>อีเมลฉบับนี้ส่งจากระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้โดยตรง</td></tr></table></div>';
+function statusLabel_(status){
+  const labels={'Pending':'รอตรวจสอบ','Approved / Quoted':'อนุมัติแล้ว / เสนอราคา','Rejected':'ไม่อนุมัติ','In Progress':'กำลังดำเนินการ','Completed':'เสร็จสิ้น'};
+  return labels[status]||String(status||'ไม่ระบุ');
+}
+function emailHtml_(b,pdfUrl,adminCopy,update){
+  const esc=escapeHtml_,service=(b.serviceNames||[]).map(esc).join(' · ')||'—';
+  const status=update?update.status:(b.status||'Pending'),statusLabel=statusLabel_(status);
+  const statusStyle=status==='Rejected'?'background:#fde8e8;color:#a52d35':status==='Completed'?'background:#e5f5ec;color:#167247':status==='Approved / Quoted'||status==='In Progress'?'background:#e4f0fa;color:#174b78':'background:#fff2d6;color:#8a6113';
+  const field=(label,value)=>'<tr><td style="padding:11px 14px;color:#64748b;width:34%;border-bottom:1px solid #e8edf3">'+label+'</td><td style="padding:11px 14px;color:#172b45;font-weight:600;border-bottom:1px solid #e8edf3">'+esc(value==null||value===''?'—':value)+'</td></tr>';
+  const greeting=update?'อัปเดตสถานะคำขอใช้บริการ':adminCopy?'มีคำขอใช้บริการผลิตและบริการสื่อรายการใหม่':'ระบบได้รับคำขอใช้บริการของท่านเรียบร้อยแล้ว';
+  const intro=update?'เรียน คุณ'+esc(b.name)+' ระบบได้อัปเดตสถานะคำขอของท่านแล้ว':adminCopy?'โปรดตรวจสอบรายละเอียดและดำเนินการตามขั้นตอน':'เรียน คุณ'+esc(b.name)+' ขอบคุณที่ส่งคำขอผ่านระบบออนไลน์';
+  const note=update&&update.adminNote?'<div style="background:#fff9eb;border:1px solid #f1dfb8;border-radius:10px;padding:14px 16px;margin:18px 0"><div style="font-weight:700;color:#765615">ข้อความจากเจ้าหน้าที่</div><div style="line-height:1.8;margin-top:5px">'+esc(update.adminNote)+'</div></div>':'';
+  const pdfButton=pdfUrl?'<div style="text-align:center;margin:24px 0"><a href="'+esc(pdfUrl)+'" style="display:inline-block;background:#d9ad55;color:#172b45;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px">เปิดเอกสารสรุปคำขอ</a></div>':'';
+  const noteText=update?'สถานะและรายละเอียดคำขอของท่านได้รับการอัปเดตโดยเจ้าหน้าที่ กรุณาเก็บหมายเลขคำขอนี้ไว้เพื่อติดตามสถานะ':'หมายเหตุ: ยอดดังกล่าวเป็นเพียงประมาณการ การให้บริการและค่าใช้จ่ายจะได้รับการยืนยันจากเจ้าหน้าที่อีกครั้ง กรุณาเก็บหมายเลขคำขอนี้ไว้เพื่อติดตามสถานะ';
+  return '<div style="margin:0;background:#f2f5f9;padding:28px 12px;font-family:Arial,Tahoma,sans-serif;color:#172b45"><table role="presentation" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e1e8f0"><tr><td style="padding:26px 30px;background:linear-gradient(120deg,#102d4f,#1d5688);border-bottom:5px solid #d9ad55;color:#fff"><div style="font-size:12px;letter-spacing:1px;color:#dbe8f4">KASETSART UNIVERSITY</div><div style="font-size:22px;font-weight:700;margin-top:7px">บริการผลิตและบริการสื่อ</div><div style="font-size:13px;color:#e3edf6;margin-top:5px">สำนักพัฒนาการเรียนรู้ตลอดชีวิต มหาวิทยาลัยเกษตรศาสตร์</div></td></tr><tr><td style="padding:28px 30px 12px"><div style="font-size:17px;font-weight:700;color:#102d4f">'+greeting+'</div><p style="font-size:14px;line-height:1.8;color:#526276">'+intro+'</p><div style="background:#eef4fa;border:1px solid #dbe7f2;border-radius:12px;padding:17px 20px;margin:18px 0"><div style="font-size:12px;color:#61758a">หมายเลขคำขอ</div><div style="font-size:25px;letter-spacing:1px;font-weight:700;color:#174b78;margin-top:4px">'+esc(b.id)+'</div><span style="display:inline-block;margin-top:10px;'+statusStyle+';padding:5px 12px;border-radius:20px;font-size:13px;font-weight:700">'+esc(statusLabel)+'</span></div><div style="font-size:15px;font-weight:700;color:#102d4f;margin:20px 0 8px">รายละเอียดคำขอ</div><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8edf3;border-radius:10px;overflow:hidden">'+field('ชื่อผู้ขอ',b.name)+field('หน่วยงาน',b.department)+field('โทรศัพท์',b.phone)+field('อีเมล',b.email)+field('กิจกรรม',b.event)+field('วันที่ใช้บริการ',b.date)+field('เวลา',b.start+' – '+b.end)+field('สถานที่',b.location)+field('บริการที่เลือก',service)+field('ประมาณการค่าใช้จ่าย',Number(b.estimate||0).toLocaleString('th-TH')+' บาท')+'</table>'+note+pdfButton+'<p style="font-size:13px;line-height:1.8;color:#718096">'+noteText+'</p></td></tr><tr><td style="padding:18px 30px;background:#f7f9fc;border-top:1px solid #e8edf3;font-size:12px;line-height:1.7;color:#718096">สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>อีเมลฉบับนี้ส่งจากระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้โดยตรง</td></tr></table></div>';
 }
 function sendBookingEmail_(b,pdfUrl){
   MailApp.sendEmail({to:b.email,subject:'ยืนยันรับคำขอ '+b.id+' | บริการผลิตและบริการสื่อ มก.',body:'ระบบได้รับคำขอ '+b.id+' แล้ว สถานะรอเจ้าหน้าที่ตรวจสอบ',htmlBody:emailHtml_(b,pdfUrl,false),name:'KU Media Service'});

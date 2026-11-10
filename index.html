@@ -27,6 +27,34 @@
 .calendar-message{padding:12px 14px;margin-bottom:12px;border-radius:9px;background:#f3f6fa;color:var(--muted);font-size:13px}
 .calendar-message.error{background:#fff0f0;color:#a52d35}
 @media(max-width:650px){.calendar-month-title{min-width:145px;font-size:16px}.calendar-controls input{min-width:150px}.calendar-day{min-height:96px;padding:6px}.calendar-booking{padding:5px;font-size:9px}}
+.admin-chart{margin-top:20px;padding:18px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe}
+.admin-chart-head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.admin-chart-head h3{margin:0;color:var(--navy);font-size:17px}
+.admin-chart-head .field{min-width:145px}
+.chart-rows{display:grid;gap:12px}
+.chart-row{display:grid;grid-template-columns:minmax(150px,220px) minmax(100px,1fr) 48px;align-items:center;gap:12px}
+.chart-label{font-size:14px;line-height:1.4}
+.chart-track{height:14px;border-radius:20px;background:#e8eef4;overflow:hidden}
+.chart-bar{height:100%;min-width:0;border-radius:20px;background:linear-gradient(90deg,#1d5688,#4e8fbd);transition:width .25s ease}
+.chart-count{text-align:right;font-size:14px;font-weight:600;color:var(--navy)}
+.chart-empty{padding:18px;text-align:center;border-radius:9px;background:#f3f6fa;color:var(--muted)}
+.status-save{display:block;min-height:20px;margin-top:5px;color:var(--muted);font-size:13px}
+.status-select{min-width:150px}
+.submit-status{min-height:24px;margin-top:10px;color:var(--blue);font-size:14px}
+.submit-status.error{color:var(--red)}
+body{font-size:16px}
+label{font-size:15px}
+.sub,.hint,.muted,.details,.notice,footer{font-size:14px}
+.pill{font-size:13px}
+.status{font-size:14px}
+td,th{font-size:14px}
+.calendar-stat{font-size:14px}
+.calendar-weekday{font-size:14px}
+.calendar-day-number{font-size:15px}
+.calendar-day-count{font-size:13px}
+.calendar-booking,.calendar-booking-time{font-size:13px}
+.calendar-message{font-size:14px}
+@media(max-width:650px){.chart-row{grid-template-columns:minmax(105px,1fr) minmax(70px,1fr) 38px;gap:8px}.chart-label{font-size:13px}.admin-chart{padding:14px}}
 </style>
 <header><div class="brand"><div class="seal">KU</div><div><h1>แบบขอใช้บริการผลิตและบริการสื่อ</h1><div class="sub">สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์</div></div></div></header>
 <main class="wrap"><nav class="tabs"><button class="tab active" data-tab="booking">📝 ยื่นคำขอใช้บริการ</button><button class="tab" data-tab="track">🔎 ติดตามคำขอ</button><button class="tab" data-tab="calendar">📅 ปฏิทินคิวบริการ</button><button class="tab" data-tab="admin">🔐 เจ้าหน้าที่</button></nav>
@@ -66,16 +94,18 @@
 <label class="choice"><input type="radio" name="payment" value="โอนเงินผ่าน QR Code / PromptPay"> โอนเงินผ่าน QR Code / PromptPay</label>
 <label class="choice"><input type="radio" name="payment" value="อื่นๆ"> อื่น ๆ</label></div><div class="field" style="margin-top:12px"><label>รายละเอียดการชำระเงินเพิ่มเติม</label><input name="paymentDetail" placeholder="ระบุรายละเอียด (ถ้ามี)"></div><label class="checkline" style="margin-top:14px"><input type="checkbox" name="taxInvoice"> ต้องการใบกำกับภาษี / ใบเสร็จรับเงินในนามหน่วยงานหรือนิติบุคคล</label><div class="grid" id="taxFields" style="margin-top:12px;display:none"><div class="field"><label>ชื่อหน่วยงาน / นิติบุคคล</label><input name="taxName"></div><div class="field"><label>เลขประจำตัวผู้เสียภาษี</label><input name="taxId"></div><div class="field full"><label>ที่อยู่สำหรับออกใบเสร็จ</label><textarea name="taxAddress"></textarea></div></div></div>
 <div class="panel"><h2 class="section-title"><span class="num">04</span> เงื่อนไขการใช้บริการ</h2><div class="notice">• ผู้ขอใช้บริการต้องยื่นคำขอล่วงหน้าอย่างน้อย 7 วันทำการ และชำระค่าธรรมเนียมก่อนวันใช้บริการหรือภายในวันที่ใช้บริการ ณ งานคลังและพัสดุ สำนักงานเลขานุการสำนักพัฒนาการเรียนรู้ตลอดชีวิต<br>• เศษของชั่วโมงคิดเป็น 1 ชั่วโมง · งานนอกกรุงเทพมหานครอาจมีค่าใช้จ่ายเพิ่มตามระยะทางและความเหมาะสม<br>• ค่าจัดส่งทางไปรษณีย์/บริษัทขนส่ง ผู้ใช้บริการรับผิดชอบค่าใช้จ่ายทั้งหมด<br>• ค่าตอบแทนเจ้าหน้าที่นอกเวลาทำการ 300 บาท: วันจันทร์–ศุกร์ 16.30–20.30 น. และวันหยุด 16.30–22.00 น.<br>• ยกเลิกต้องแจ้งล่วงหน้าอย่างน้อย 3 วันทำการ มิฉะนั้นสำนักฯ สงวนสิทธิ์ไม่คืนค่าธรรมเนียม รวมถึงกรณีไม่มาใช้บริการ</div><label class="checkline" style="margin-top:14px"><input type="checkbox" name="acceptTerms" required> ข้าพเจ้าอ่านและยอมรับเงื่อนไขการใช้บริการ <span class="required">*</span></label></div>
-<div class="actions"><button class="btn-primary" type="submit">ส่งคำขอใช้บริการ →</button><button class="btn-light" type="reset">ล้างข้อมูล</button></div></form></section>
+<div class="actions"><button class="btn-primary" type="submit">ส่งคำขอใช้บริการ →</button><button class="btn-light" type="reset">ล้างข้อมูล</button></div><div id="submitStatus" class="submit-status" role="status" aria-live="polite"></div></form></section>
 <section id="track" class="hidden"><div class="panel"><h2 class="section-title">ติดตามสถานะคำขอ</h2><div class="grid"><div class="field"><label>รหัสคำขอ</label><input id="trackId" placeholder="KU-YYYYMM-XXX"></div><div class="field" style="justify-content:end"><button class="btn-primary" id="trackBtn">ตรวจสอบสถานะ</button></div></div><div id="trackResult" class="empty">กรอกรหัสคำขอเพื่อค้นหาสถานะ</div></div></section>
 <section id="calendar" class="hidden"><div class="panel"><h2 class="section-title">ปฏิทินคิวบริการ</h2><p class="muted">แสดงเฉพาะรายการที่ได้รับอนุมัติแล้ว · กรุณาติดต่อเจ้าหน้าที่เพื่อตรวจสอบคิวว่างก่อนยืนยันการจอง</p><div class="calendar-toolbar"><div class="calendar-controls"><button type="button" class="btn-light" id="calendarPrev" aria-label="เดือนก่อนหน้า">‹</button><button type="button" class="btn-light" id="calendarToday">วันนี้</button><button type="button" class="btn-light" id="calendarNext" aria-label="เดือนถัดไป">›</button><strong id="calendarMonthTitle" class="calendar-month-title" aria-live="polite"></strong></div><div class="field"><label for="calendarMonth">เลือกเดือน</label><input type="month" id="calendarMonth"></div></div><div class="calendar-stats"><div class="calendar-stat"><strong id="calendarBookingCount">0</strong>คิวที่อนุมัติ</div><div class="calendar-stat"><strong id="calendarDayCount">0</strong>วันที่มีคิว</div></div><div id="calendarMessage" class="calendar-message" role="status">กำลังโหลดข้อมูลคิว...</div><div class="calendar-scroll"><div id="calendarList" class="calendar-grid" role="grid" aria-label="ปฏิทินคิวบริการ"></div></div></div></section>
-<section id="admin" class="hidden"><div class="panel"><div id="adminLogin"><h2 class="section-title">เข้าสู่ระบบเจ้าหน้าที่</h2><p class="muted">บัญชีผู้ดูแลต้องตั้งค่าผ่านระบบหลังบ้านที่ปลอดภัยก่อนใช้งานจริง</p><div class="grid"><div class="field"><label>อีเมลผู้ดูแล</label><input type="email" id="adminEmail" placeholder="อีเมลเจ้าหน้าที่"></div><div class="field"><label>รหัสผ่าน</label><input type="password" id="adminPassword" placeholder="รหัสผ่าน"></div></div><label class="checkline" style="margin-top:12px"><input type="checkbox" id="rememberAdmin"> จดจำการเข้าสู่ระบบบนอุปกรณ์นี้</label><div class="actions"><button class="btn-primary" id="adminLoginBtn">เข้าสู่ระบบ</button><button class="btn-light" id="forgotBtn">ลืมรหัสผ่าน</button></div><p class="hint">ไม่ใส่บัญชีหรือรหัสผ่านเริ่มต้นไว้ในหน้าเว็บ เพื่อป้องกันการเข้าถึงโดยไม่ได้รับอนุญาต</p></div><div id="adminPanel" class="hidden"><div class="adminbar"><h2 class="section-title">Dashboard ผู้ดูแลระบบ</h2><button class="btn-danger" id="logoutBtn">ออกจากระบบแอดมิน</button></div><div class="kpis"><div class="kpi"><span class="muted">คำขอทั้งหมด</span><b id="kAll">0</b></div><div class="kpi"><span class="muted">รอตรวจสอบ</span><b id="kPending">0</b></div><div class="kpi"><span class="muted">อนุมัติแล้ว</span><b id="kApproved">0</b></div><div class="kpi"><span class="muted">รายได้ประมาณการ</span><b id="kRevenue">฿0</b></div></div><div class="actions"><button class="btn-light" id="refreshAdmin">รีเฟรชข้อมูล</button><button class="btn-light" id="exportCsv">ส่งออก CSV</button></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>รหัสคำขอ</th><th>ผู้ขอ</th><th>วันที่</th><th>บริการ</th><th>ประมาณการ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="adminRows"><tr><td colspan="7" class="empty">ยังไม่ได้เชื่อมต่อฐานข้อมูล</td></tr></tbody></table></div><div class="notice" style="margin-top:15px">การใช้งานจริง: ตั้งค่า URL ของ Google Apps Script Web App ในไฟล์ตั้งค่าระบบ เพื่อเปิดใช้ฐานข้อมูล Google Sheets, Drive, Email และระบบอนุมัติ</div></div></div></section>
+<section id="admin" class="hidden"><div class="panel"><div id="adminLogin"><h2 class="section-title">เข้าสู่ระบบเจ้าหน้าที่</h2><p class="muted">บัญชีผู้ดูแลต้องตั้งค่าผ่านระบบหลังบ้านที่ปลอดภัยก่อนใช้งานจริง</p><div class="grid"><div class="field"><label>อีเมลผู้ดูแล</label><input type="email" id="adminEmail" placeholder="อีเมลเจ้าหน้าที่"></div><div class="field"><label>รหัสผ่าน</label><input type="password" id="adminPassword" placeholder="รหัสผ่าน"></div></div><label class="checkline" style="margin-top:12px"><input type="checkbox" id="rememberAdmin"> จดจำการเข้าสู่ระบบบนอุปกรณ์นี้</label><div class="actions"><button class="btn-primary" id="adminLoginBtn">เข้าสู่ระบบ</button><button class="btn-light" id="forgotBtn">ลืมรหัสผ่าน</button></div><p class="hint">ไม่ใส่บัญชีหรือรหัสผ่านเริ่มต้นไว้ในหน้าเว็บ เพื่อป้องกันการเข้าถึงโดยไม่ได้รับอนุญาต</p></div><div id="adminPanel" class="hidden"><div class="adminbar"><h2 class="section-title">Dashboard ผู้ดูแลระบบ</h2><button class="btn-danger" id="logoutBtn">ออกจากระบบแอดมิน</button></div><div class="kpis"><div class="kpi"><span class="muted">คำขอทั้งหมด</span><b id="kAll">0</b></div><div class="kpi"><span class="muted">รอตรวจสอบ</span><b id="kPending">0</b></div><div class="kpi"><span class="muted">อนุมัติแล้ว</span><b id="kApproved">0</b></div><div class="kpi"><span class="muted">รายได้ประมาณการ</span><b id="kRevenue">฿0</b></div></div><section class="admin-chart" aria-labelledby="usageChartTitle"><div class="admin-chart-head"><div><h3 id="usageChartTitle">สถิติการใช้งานแยกตามประเภทบริการ</h3><p class="muted">นับจำนวนคำขอที่อนุมัติ กำลังดำเนินการ หรือเสร็จสิ้น ตามปีที่ใช้บริการ</p></div><div class="field"><label for="statsYear">ปีที่ใช้บริการ</label><select id="statsYear" aria-label="เลือกปีสำหรับกราฟสถิติ"></select></div></div><div id="serviceChart" class="chart-rows" role="list" aria-label="กราฟจำนวนการใช้บริการแยกตามประเภท"></div></section><div class="actions"><button class="btn-light" id="refreshAdmin">รีเฟรชข้อมูล</button><button class="btn-light" id="exportCsv">ส่งออก CSV</button></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>รหัสคำขอ</th><th>ผู้ขอ</th><th>วันที่</th><th>บริการ</th><th>ประมาณการ</th><th>สถานะ</th><th>เปลี่ยนสถานะ</th></tr></thead><tbody id="adminRows"><tr><td colspan="7" class="empty">ยังไม่ได้เชื่อมต่อฐานข้อมูล</td></tr></tbody></table></div><div class="notice" style="margin-top:15px">การใช้งานจริง: ตั้งค่า URL ของ Google Apps Script Web App ในไฟล์ตั้งค่าระบบ เพื่อเปิดใช้ฐานข้อมูล Google Sheets, Drive, Email และระบบอนุมัติ</div></div></div></section>
 <footer>สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>ระบบคำขอใช้บริการผลิตและบริการสื่อ</footer></main>
 <div id="modal" class="modal hidden"><div class="dialog"><div id="modalBody"></div><div class="actions"><button class="btn-primary" id="modalClose">ปิดหน้าต่าง</button><button class="btn-light hidden" id="downloadPdf">ดาวน์โหลดสรุปคำขอ</button></div></div></div>
 <script>
 const API_URL='https://script.google.com/macros/s/AKfycbx07u5bfdZDVbmAs3HjGCvbbWyruOPVoGR1fd-FT9UAZX1uU1J_yg6QjxdxSCYDPiSrVQ/exec';let currentRequest=null,adminData=[],adminToken=null,calendarRequest=0;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const services={studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์'};
+const statusLabels={Pending:'รอตรวจสอบ', 'Approved / Quoted':'อนุมัติแล้ว / เสนอราคา',Rejected:'ไม่อนุมัติ','In Progress':'กำลังดำเนินการ',Completed:'เสร็จสิ้น'};
+function escapeHtmlClient(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function sound(ok){try{const c=new(window.AudioContext||window.webkitAudioContext)();[0,1,2].forEach((n)=>{let o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=ok?[523,659,784][n]:[330,260,190][n];g.gain.setValueAtTime(.0001,c.currentTime+n*.12);g.gain.exponentialRampToValueAtTime(.08,c.currentTime+n*.12+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+n*.12+.18);o.start(c.currentTime+n*.12);o.stop(c.currentTime+n*.12+.2)})}catch(e){}}
 function showModal(html,request=false){$('#modalBody').innerHTML=html;$('#modal').classList.remove('hidden');$('#downloadPdf').classList.toggle('hidden',!request)}
 $('#modalClose').onclick=()=>$('#modal').classList.add('hidden');
@@ -89,8 +119,42 @@ function beepError(msg){sound(false);showModal('<h2>⚠️ กรุณาตร
 function makeId(){let d=new Date();return 'KU-'+d.getFullYear()+(('0'+(d.getMonth()+1)).slice(-2))+'-'+Math.random().toString(36).slice(2,5).toUpperCase()}
 function formObject(form){let o=Object.fromEntries(new FormData(form).entries());o.services=$$('input[name=services]:checked').map(x=>x.value);o.serviceNames=o.services.map(x=>services[x]);o.estimate=calc();o.status='Pending';o.createdAt=new Date().toISOString();return o}
 async function api(action,data={}){if(!API_URL)throw Error('ยังไม่ได้ตั้งค่า Google Apps Script API URL');let r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...data})});let j=await r.json();if(!r.ok||j.error)throw Error(j.error||'เกิดข้อผิดพลาดในการเชื่อมต่อ');return j}
-$('#bookingForm').onsubmit=async e=>{e.preventDefault();let f=e.currentTarget;if(!f.reportValidity())return beepError('กรุณากรอกข้อมูลที่มีเครื่องหมาย * และยอมรับเงื่อนไขให้ครบถ้วน');let d=formObject(f);if(!d.services.length)return beepError('กรุณาเลือกประเภทบริการอย่างน้อย 1 รายการ');if(d.end<=d.start)return beepError('เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น');if(d.date<$('#serviceDate').min)return beepError('กรุณายื่นคำขอล่วงหน้าอย่างน้อย 7 วัน');d.id=makeId();currentRequest=d;try{let res=await api('createBooking',{booking:d});d.id=res.id||d.id;d.emailSent=res.emailSent; sound(true);showModal('<h2>🎉 ส่งคำขอเรียบร้อยแล้ว</h2><p>รหัสคำขอของคุณ</p><h2 style="letter-spacing:1px">'+d.id+'</h2><p>สถานะ: <span class="status">Pending · รอเจ้าหน้าที่ตรวจสอบ</span></p><p class="muted">การแจ้งเตือนอีเมล: '+(res.emailSent?'ส่งแล้ว':'ระบบรับคำขอแล้ว แต่ยังไม่ยืนยันการส่งอีเมล')+'</p><p>เก็บรหัสคำขอนี้ไว้สำหรับติดตามสถานะ</p>',true); }catch(err){sound(false);showModal('<h2>⚠️ ยังส่งคำขอไม่สำเร็จ</h2><p>'+err.message+'</p><p class="muted">ข้อมูลยังไม่ถูกยืนยันว่าบันทึกลงฐานข้อมูล กรุณาลองอีกครั้งหรือติดต่อเจ้าหน้าที่</p>')}};
-$('#downloadPdf').onclick=()=>{if(!currentRequest)return;let d=currentRequest;let w=window.open('','_blank');w.document.write('<html lang="th"><meta charset="utf-8"><title>สรุปคำขอ '+d.id+'</title><style>body{font:15px sans-serif;padding:35px;line-height:1.8}h1{font-size:22px}table{width:100%}td{padding:7px;border-bottom:1px solid #ddd}</style><h1>สรุปคำขอใช้บริการผลิตและบริการสื่อ มก.</h1><h2>'+d.id+'</h2><table>'+Object.entries({'ผู้ขอ':d.name,'หน่วยงาน':d.department||'-','โทรศัพท์':d.phone,'อีเมล':d.email,'กิจกรรม':d.event,'วันที่':d.date,'เวลา':d.start+'–'+d.end,'บริการ':d.serviceNames.join(', '),'ยอดประมาณการ':d.estimate.toLocaleString()+' บาท','การชำระเงิน':d.payment,'สถานะ':d.status}).map(([k,v])=>'<tr><td>'+k+'</td><td>'+v+'</td></tr>').join('')+'</table><p>เอกสารสรุปคำขอเบื้องต้น ไม่ใช่ใบเสร็จรับเงิน</p><script>window.print()<\/script></html>');w.document.close()};
+$('#bookingForm').onsubmit=async e=>{
+  e.preventDefault();
+  const f=e.currentTarget;
+  if(!f.reportValidity())return beepError('กรุณากรอกข้อมูลที่มีเครื่องหมาย * และยอมรับเงื่อนไขให้ครบถ้วน');
+  const d=formObject(f);
+  if(!d.services.length)return beepError('กรุณาเลือกประเภทบริการอย่างน้อย 1 รายการ');
+  if(d.end<=d.start)return beepError('เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น');
+  if(d.date<$('#serviceDate').min)return beepError('กรุณายื่นคำขอล่วงหน้าอย่างน้อย 7 วัน');
+  const submitButton=f.querySelector('button[type="submit"]'),submitStatus=$('#submitStatus'),originalText=submitButton.textContent;
+  if(submitButton.disabled)return;
+  d.id=makeId();currentRequest=d;submitButton.disabled=true;submitButton.setAttribute('aria-busy','true');submitButton.textContent='กำลังส่งคำขอ...';
+  submitStatus.classList.remove('error');submitStatus.textContent='กำลังบันทึกคำขอ กรุณารอสักครู่';
+  const slowNotice=setTimeout(()=>{submitStatus.textContent='ระบบกำลังบันทึกข้อมูล อาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้านี้'},4000);
+  try{
+    const res=await api('createBooking',{booking:d});d.id=res.id||d.id;d.emailSent=res.emailSent;
+    submitStatus.textContent='บันทึกคำขอเรียบร้อยแล้ว';sound(true);
+    showModal('<h2>🎉 ส่งคำขอเรียบร้อยแล้ว</h2><p>รหัสคำขอของคุณ</p><h2 style="letter-spacing:1px">'+escapeHtmlClient(d.id)+'</h2><p>สถานะ: <span class="status">'+statusLabels.Pending+'</span></p><p class="muted">การแจ้งเตือนอีเมล: '+(res.emailSent?'ส่งแล้ว':'ระบบรับคำขอแล้ว และจะส่งอีเมลเมื่อดำเนินการเสร็จ')+'</p><p>เก็บรหัสคำขอนี้ไว้สำหรับติดตามสถานะ</p>',true);
+  }catch(err){
+    submitStatus.classList.add('error');submitStatus.textContent='ส่งคำขอไม่สำเร็จ กรุณาตรวจสอบข้อความแจ้งเตือน';
+    sound(false);showModal('<h2>⚠️ ยังส่งคำขอไม่สำเร็จ</h2><p>'+escapeHtmlClient(err.message)+'</p><p class="muted">ข้อมูลยังไม่ถูกยืนยันว่าบันทึกลงฐานข้อมูล กรุณาลองอีกครั้งหรือติดต่อเจ้าหน้าที่</p>');
+  }finally{
+    clearTimeout(slowNotice);submitButton.disabled=false;submitButton.removeAttribute('aria-busy');submitButton.textContent=originalText;
+  }
+};
+$('#downloadPdf').onclick=()=>{
+  if(!currentRequest)return beepError('ไม่พบข้อมูลคำขอสำหรับสร้างเอกสาร');
+  const d=currentRequest,w=window.open('','_blank');
+  if(!w)return beepError('เบราว์เซอร์บล็อกหน้าต่างเอกสาร กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้แล้วลองอีกครั้ง');
+  const fields={'ผู้ขอ':d.name,'หน่วยงาน':d.department||'-','โทรศัพท์':d.phone,'อีเมล':d.email,'กิจกรรม':d.event,'วันที่':d.date,'เวลา':d.start+'–'+d.end,'บริการ':(d.serviceNames||[]).join(', '),'ยอดประมาณการ':Number(d.estimate||0).toLocaleString('th-TH')+' บาท','การชำระเงิน':d.payment,'สถานะ':statusLabels[d.status]||statusLabels.Pending};
+  const rows=Object.entries(fields).map(([label,value])=>'<tr><th>'+escapeHtmlClient(label)+'</th><td>'+escapeHtmlClient(value||'-')+'</td></tr>').join('');
+  try{
+    w.document.open();
+    w.document.write('<!doctype html><html lang="th"><head><meta charset="utf-8"><title>สรุปคำขอ '+escapeHtmlClient(d.id)+'</title><style>body{font:16px Prompt,Arial,sans-serif;padding:36px;line-height:1.8;color:#1b2a3a}h1{font-size:23px;color:#102d4f}.brand{border-bottom:4px solid #d9ad55;padding-bottom:16px}table{width:100%;border-collapse:collapse;margin-top:22px}th,td{text-align:left;padding:10px;border-bottom:1px solid #dce4ec}th{width:32%;color:#526276}.print{margin-top:24px;padding:10px 18px;border:0;border-radius:8px;background:#102d4f;color:white;font:inherit;cursor:pointer}@media print{.print{display:none}body{padding:0}}</style></head><body><div class="brand"><h1>สรุปคำขอใช้บริการผลิตและบริการสื่อ มก.</h1><div>สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์</div></div><h2>หมายเลขคำขอ '+escapeHtmlClient(d.id)+'</h2><table>'+rows+'</table><p>เอกสารสรุปคำขอเบื้องต้น ไม่ใช่ใบเสร็จรับเงินหรือใบกำกับภาษี</p><button class="print" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></body></html>');
+    w.document.close();w.focus();
+  }catch(err){w.close();beepError('เปิดเอกสารสรุปไม่สำเร็จ: '+err.message)}
+};
 $('#trackBtn').onclick=async()=>{let id=$('#trackId').value.trim();if(!id)return;try{let r=await api('getBooking',{id});let b=r.booking;$('#trackResult').innerHTML='<h3>'+b.id+'</h3><p><b>'+b.event+'</b></p><p>วันที่ '+b.date+' เวลา '+b.start+'–'+b.end+'</p><p>สถานะ: <span class="status">'+b.status+'</span></p><p>'+ (b.adminNote||'')+'</p>'}catch(e){$('#trackResult').textContent=e.message}};
 function monthValue_(date){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')}
 function shiftCalendarMonth_(offset){const parts=$('#calendarMonth').value.split('-').map(Number);if(parts.length!==2||!parts[0]||!parts[1])return;const date=new Date(parts[0],parts[1]-1+offset,1);$('#calendarMonth').value=monthValue_(date);loadCalendar()}
@@ -151,6 +215,53 @@ $('#forgotBtn').onclick=()=>{
 };
 $('#logoutBtn').onclick=()=>{adminToken=null;$('#adminPanel').classList.add('hidden');$('#adminLogin').classList.remove('hidden');$('#adminPassword').value=''};
 $('#refreshAdmin').onclick=loadAdmin;
-async function loadAdmin(){try{let r=await api('adminList',{token:adminToken});adminData=r.bookings||[];$('#kAll').textContent=adminData.length;$('#kPending').textContent=adminData.filter(x=>x.status==='Pending').length;$('#kApproved').textContent=adminData.filter(x=>x.status==='Approved / Quoted').length;$('#kRevenue').textContent='฿'+adminData.reduce((s,x)=>s+(+x.estimate||0),0).toLocaleString();$('#adminRows').innerHTML=adminData.map(b=>'<tr><td>'+b.id+'</td><td>'+b.name+'</td><td>'+b.date+'</td><td>'+(b.serviceNames||[]).join(', ')+'</td><td>฿'+(+b.estimate||0).toLocaleString()+'</td><td>'+b.status+'</td><td><select data-id="'+b.id+'" class="statusChange"><option>Pending</option><option>Approved / Quoted</option><option>Rejected</option><option>In Progress</option><option>Completed</option></select></td></tr>').join('');$$('.statusChange').forEach(s=>{s.value=adminData.find(x=>x.id===s.dataset.id)?.status||'Pending';s.onchange=async()=>{try{await api('updateStatus',{token:adminToken,id:s.dataset.id,status:s.value});await loadAdmin()}catch(e){beepError(e.message)}}})}catch(e){$('#adminRows').innerHTML='<tr><td colspan="7">'+e.message+'</td></tr>'}}
-$('#exportCsv').onclick=()=>{let rows=[['รหัส','ชื่อ','วันที่','สถานะ','ยอดประมาณการ'],...adminData.map(x=>[x.id,x.name,x.date,x.status,x.estimate])];let blob=new Blob(['\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='ku-media-bookings.csv';a.click();URL.revokeObjectURL(u)};
+function renderServiceChart(){
+  const yearSelect=$('#statsYear'),chart=$('#serviceChart'),years=[...new Set(adminData.map(b=>String(b.date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort((a,b)=>b.localeCompare(a));
+  if(!years.length)years.push(String(new Date().getFullYear()));
+  const previousYear=yearSelect.value;yearSelect.replaceChildren();
+  years.forEach(year=>{const option=document.createElement('option');option.value=year;option.textContent='พ.ศ. '+(Number(year)+543);yearSelect.appendChild(option)});
+  yearSelect.value=years.includes(previousYear)?previousYear:years[0];
+  const activeStatuses=new Set(['Approved / Quoted','In Progress','Completed']);
+  const counts=Object.entries(services).map(([id,label])=>({id,label,count:adminData.filter(b=>String(b.date||'').slice(0,4)===yearSelect.value&&activeStatuses.has(b.status)&&Array.isArray(b.services)&&b.services.includes(id)).length}));
+  const maxCount=Math.max(1,...counts.map(item=>item.count));chart.replaceChildren();
+  counts.forEach(item=>{
+    const row=document.createElement('div'),label=document.createElement('span'),track=document.createElement('div'),bar=document.createElement('div'),count=document.createElement('span');
+    row.className='chart-row';row.setAttribute('role','listitem');label.className='chart-label';label.textContent=item.label;
+    track.className='chart-track';track.setAttribute('role','progressbar');track.setAttribute('aria-label',item.label);track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(maxCount));track.setAttribute('aria-valuenow',String(item.count));
+    bar.className='chart-bar';bar.style.width=item.count?Math.max(4,item.count/maxCount*100)+'%':'0%';track.appendChild(bar);
+    count.className='chart-count';count.textContent=item.count.toLocaleString('th-TH');row.append(label,track,count);chart.appendChild(row);
+  });
+  if(!counts.some(item=>item.count)){const empty=document.createElement('div');empty.className='chart-empty';empty.setAttribute('role','listitem');empty.textContent='ยังไม่มีคำขอที่อนุมัติสำหรับปีนี้';chart.appendChild(empty)}
+}
+$('#statsYear').onchange=renderServiceChart;
+async function loadAdmin(){
+  try{
+    const r=await api('adminList',{token:adminToken});adminData=r.bookings||[];
+    $('#kAll').textContent=adminData.length;
+    $('#kPending').textContent=adminData.filter(x=>x.status==='Pending').length;
+    $('#kApproved').textContent=adminData.filter(x=>x.status==='Approved / Quoted').length;
+    $('#kRevenue').textContent='฿'+adminData.reduce((s,x)=>s+(+x.estimate||0),0).toLocaleString('th-TH');
+    renderServiceChart();
+    const rows=$('#adminRows');rows.replaceChildren();
+    adminData.forEach(b=>{
+      const tr=document.createElement('tr');
+      [b.id,b.name,b.date,(b.serviceNames||[]).join(', '),'฿'+(+b.estimate||0).toLocaleString('th-TH')].forEach(value=>{const td=document.createElement('td');td.textContent=value||'—';tr.appendChild(td)});
+      const statusCell=document.createElement('td'),status=document.createElement('span');status.className='status';status.textContent=statusLabels[b.status]||b.status||'—';statusCell.appendChild(status);tr.appendChild(statusCell);
+      const actionCell=document.createElement('td'),select=document.createElement('select'),saveMessage=document.createElement('span');
+      select.className='status-select';select.dataset.id=b.id;select.setAttribute('aria-label','เปลี่ยนสถานะคำขอ '+b.id);
+      Object.entries(statusLabels).forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option)});
+      select.value=statusLabels[b.status]?b.status:'Pending';saveMessage.className='status-save';saveMessage.setAttribute('aria-live','polite');
+      select.onchange=async()=>{
+        const previous=b.status||'Pending',next=select.value;
+        if(next===previous)return;
+        select.disabled=true;saveMessage.textContent='กำลังบันทึกสถานะ...';
+        try{await api('updateStatus',{token:adminToken,id:b.id,status:next});await loadAdmin()}
+        catch(error){select.value=previous;select.disabled=false;saveMessage.textContent='บันทึกไม่สำเร็จ';beepError(error.message)}
+      };
+      actionCell.append(select,saveMessage);tr.appendChild(actionCell);rows.appendChild(tr);
+    });
+    if(!adminData.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.className='empty';td.textContent='ยังไม่มีคำขอใช้บริการ';tr.appendChild(td);rows.appendChild(tr)}
+  }catch(error){const rows=$('#adminRows'),tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='โหลดข้อมูลไม่สำเร็จ: '+error.message;tr.appendChild(td);rows.replaceChildren(tr)}
+}
+$('#exportCsv').onclick=()=>{const rows=[['รหัส','ชื่อ','วันที่','สถานะ','ยอดประมาณการ'],...adminData.map(x=>[x.id,x.name,x.date,statusLabels[x.status]||x.status,x.estimate])];let blob=new Blob(['\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='ku-media-bookings.csv';a.click();URL.revokeObjectURL(u)};
 </script></body></html>
