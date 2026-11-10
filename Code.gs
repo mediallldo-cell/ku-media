@@ -56,7 +56,7 @@ function all_(){
   const sh=sheet_(),v=sh.getDataRange().getValues();
   return v.slice(1).filter(r=>r[0]).map(r=>({
     id:String(r[0]),createdAt:r[1],name:r[2],department:r[3],phone:r[4],email:r[5],date:dateString_(r[6]),
-    event:r[7],project:r[8],location:r[9],start:r[10],end:r[11],requirements:r[12],
+    event:r[7],project:r[8],location:r[9],start:timeString_(r[10]),end:timeString_(r[11]),requirements:r[12],
     services:parse_(r[13]),serviceNames:parse_(r[14]),estimate:Number(r[15]||0),payment:r[16],
     paymentDetail:r[17],taxInvoice:r[18],taxName:r[19],taxId:r[20],taxAddress:r[21],
     status:r[22],adminNote:r[23],driveFolderUrl:r[24],receiptUrl:r[25]
@@ -64,6 +64,7 @@ function all_(){
 }
 function parse_(v){try{return JSON.parse(v||'[]')}catch(_){return []}}
 function dateString_(v){if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd');return String(v||'')}
+function timeString_(v){if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'HH:mm');return String(v||'')}
 function route_(q){
   switch(q.action){
     case 'createBooking': return create_(q.booking);
