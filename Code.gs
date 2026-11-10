@@ -10,6 +10,8 @@
 const HEADERS = ['id','createdAt','name','department','phone','email','date','event','project','location','start','end','requirements','services','serviceNames','estimate','payment','paymentDetail','taxInvoice','taxName','taxId','taxAddress','status','adminNote','driveFolderUrl','receiptUrl'];
 const STATUSES = ['Pending','Approved / Quoted','Rejected','In Progress','Completed'];
 const SERVICE_LABELS = {studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์'};
+const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)'};
+const PORTFOLIO_CATEGORY_BY_SERVICE = {studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing'};
 const PORTFOLIO_HEADERS = ['id','createdAt','category','title','description','fileId','active'];
 const MAX_PORTFOLIO_IMAGE_BYTES = 5 * 1024 * 1024;
 const PROP = PropertiesService.getScriptProperties();
@@ -274,19 +276,21 @@ function portfolioSheet_(){
   if(!sheet)throw new Error('ไม่พบชีต Portfolio กรุณารัน setup() ใน Apps Script ก่อน');
   return sheet;
 }
+function portfolioCategory_(category){return PORTFOLIO_CATEGORIES[category]?category:(PORTFOLIO_CATEGORY_BY_SERVICE[category]||category)}
+function portfolioImageUrl_(fileId){return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(fileId)+'&sz=w1200'}
 function portfolioItems_(publicOnly){
   const sheet=portfolioSheet_(),values=sheet.getDataRange().getValues();
   return values.slice(1).filter(row=>row[0]&&(!publicOnly||row[6]!==false)).map(row=>({
-    id:String(row[0]),createdAt:row[1],category:String(row[2]||''),title:String(row[3]||''),
+    id:String(row[0]),createdAt:row[1],category:portfolioCategory_(String(row[2]||'')),title:String(row[3]||''),
     description:String(row[4]||''),fileId:String(row[5]||''),
-    imageUrl:'https://drive.google.com/uc?export=view&id='+encodeURIComponent(String(row[5]||'')),
+    imageUrl:portfolioImageUrl_(String(row[5]||'')),
     active:row[6]!==false
   })).filter(item=>item.fileId);
 }
 function savePortfolioItem_(q){
   auth_(q.token);
   const id=String(q.id||''),category=String(q.category||''),title=String(q.title||'').trim(),description=String(q.description||'').trim();
-  if(!SERVICE_LABELS[category])throw new Error('กรุณาเลือกประเภทบริการที่ถูกต้อง');
+  if(!PORTFOLIO_CATEGORIES[category])throw new Error('กรุณาเลือกประเภทงานที่ถูกต้อง');
   if(!title)throw new Error('กรุณาระบุชื่อผลงาน');
   if(title.length>120||description.length>1000)throw new Error('ชื่อผลงานต้องไม่เกิน 120 ตัวอักษร และรายละเอียดไม่เกิน 1,000 ตัวอักษร');
   const sheet=portfolioSheet_(),values=sheet.getDataRange().getValues();
@@ -314,7 +318,7 @@ function savePortfolioItem_(q){
   if(existing)sheet.getRange(rowIndex+1,1,1,row.length).setValues([row]);
   else sheet.appendRow(row);
   if(existing&&existing[5]&&existing[5]!==fileId)DriveApp.getFileById(String(existing[5])).setTrashed(true);
-  return {ok:true,item:{id:row[0],createdAt:row[1],category,title,description,fileId,imageUrl:'https://drive.google.com/uc?export=view&id='+encodeURIComponent(fileId),active:true}};
+  return {ok:true,item:{id:row[0],createdAt:row[1],category,title,description,fileId,imageUrl:portfolioImageUrl_(fileId),active:true}};
 }
 function deletePortfolioItem_(q){
   auth_(q.token);
