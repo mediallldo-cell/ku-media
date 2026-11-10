@@ -63,7 +63,7 @@ function sheet_(){const id=PROP.getProperty('SHEET_ID');if(!id)throw new Error('
 function all_(){
   const sh=sheet_(),v=sh.getDataRange().getValues();
   return v.slice(1).filter(r=>r[0]).map(r=>({
-    id:String(r[0]),createdAt:r[1],name:r[2],department:r[3],phone:r[4],email:r[5],date:dateString_(r[6]),
+    id:String(r[0]),createdAt:r[1],name:r[2],department:r[3],phone:phoneString_(r[4]),email:r[5],date:dateString_(r[6]),
     event:r[7],project:r[8],location:r[9],start:timeString_(r[10]),end:timeString_(r[11]),requirements:r[12],
     services:parse_(r[13]),serviceNames:parse_(r[14]),estimate:Number(r[15]||0),payment:r[16],
     paymentDetail:r[17],taxInvoice:r[18],taxName:r[19],taxId:r[20],taxAddress:r[21],
@@ -73,6 +73,12 @@ function all_(){
 function parse_(v){try{return JSON.parse(v||'[]')}catch(_){return []}}
 function dateString_(v){if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd');return String(v||'')}
 function timeString_(v){if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'HH:mm');return String(v||'')}
+function phoneString_(v){
+  if(v==null||v==='')return '';
+  let phone=String(v).trim();
+  if(typeof v==='number'&&Number.isFinite(v)){phone=String(Math.trunc(v));if(/^\d{8,9}$/.test(phone))phone='0'+phone}
+  return phone;
+}
 function route_(q){
   switch(q.action){
     case 'createBooking': return create_(q.booking);
@@ -110,7 +116,10 @@ function create_(b){
     }
     if(clashes.length)throw Error('ช่วงเวลานี้มีรายการที่อนุมัติแล้ว กรุณาติดต่อเจ้าหน้าที่หรือเลือกเวลาใหม่');
     b.status='Pending';
-    sh.appendRow([b.id,b.createdAt,b.name,b.department||'',b.phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','']);
+    const newRow=lastRow+1,phone=String(b.phone).trim();
+    sh.getRange(newRow,5).setNumberFormat('@');
+    sh.appendRow([b.id,b.createdAt,b.name,b.department||'',phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','']);
+    sh.getRange(newRow,5).setNumberFormat('@').setValue(phone);
     // Queue the PDF and email; do not make the applicant wait for Gmail/Drive.
     const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
     ss.getSheetByName('MailQueue').appendRow([new Date(),b.id,b.email,'newBooking','QUEUED','']);

@@ -214,6 +214,29 @@ $('#downloadPdf').onclick=()=>{
     w.document.close();w.focus();
   }catch(err){w.close();beepError('เปิดเอกสารสรุปไม่สำเร็จ: '+err.message)}
 };
+function openAdminRequestPreview_(booking){
+  const preview=window.open('','_blank');
+  if(!preview){beepError('เบราว์เซอร์บล็อกหน้าต่างตัวอย่าง กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้แล้วลองอีกครั้ง');return}
+  const esc=escapeHtmlClient,value=(text)=>text==null||text===''?'-':String(text);
+  const services=(booking.serviceNames||[]).join(', ');
+  const fields=[
+    ['ชื่อผู้ขอ',booking.name],['หน่วยงาน',booking.department],['โทรศัพท์',booking.phone],['อีเมล',booking.email],
+    ['กิจกรรม / งาน',booking.event],['สถานที่',booking.location],['วันที่ใช้บริการ',booking.date],
+    ['เวลาใช้บริการ',(booking.start||'')+(booking.start&&booking.end?' – ':'')+(booking.end||'')],
+    ['บริการที่เลือก',services],['รายละเอียดงาน',booking.requirements],
+    ['ประมาณการค่าใช้จ่าย',Number(booking.estimate||0).toLocaleString('th-TH')+' บาท'],
+    ['การชำระเงิน',[booking.payment,booking.paymentDetail].filter(Boolean).join(' · ')],
+    ['ใบกำกับภาษี',booking.taxInvoice?'ต้องการ':'ไม่ต้องการ']
+  ];
+  if(booking.adminNote)fields.push(['ข้อความจากเจ้าหน้าที่',booking.adminNote]);
+  const rows=fields.map(([label,text])=>'<tr><th>'+esc(label)+'</th><td>'+esc(value(text))+'</td></tr>').join('');
+  const title='คำขอใช้บริการ '+esc(booking.id);
+  try{
+    preview.document.open();
+    preview.document.write('<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+'</title><style>*{box-sizing:border-box}body{margin:0;background:#eef2f6;color:#172b45;font:15px Tahoma,Arial,sans-serif;line-height:1.65}.toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:12px;padding:12px;background:#102d4f}.toolbar button{border:0;border-radius:8px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}.print{background:#d9ad55;color:#172b45}.close{background:#fff;color:#102d4f}.page{width:min(210mm,calc(100% - 32px));min-height:297mm;margin:24px auto;padding:18mm;background:#fff;box-shadow:0 6px 26px #173c5a22}.brand{padding:0 0 16px;border-bottom:5px solid #d9ad55}.eyebrow{font-size:11px;letter-spacing:1px;color:#61758a}.brand h1{margin:6px 0;color:#102d4f;font-size:23px}.brand p{margin:0;color:#64748b;font-size:13px}.request-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:20px 0}.request-head h2{margin:0;color:#102d4f;font-size:19px}.status{padding:6px 12px;border-radius:18px;background:#fff2d6;color:#8a6113;font-weight:700;white-space:nowrap}table{width:100%;border-collapse:collapse;border:1px solid #e1e8f0}th,td{padding:10px 12px;border-bottom:1px solid #e8edf3;text-align:left;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{width:30%;background:#f7f9fc;color:#526276;font-weight:600}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:52px;page-break-inside:avoid}.signature{text-align:center}.signature-space{height:48px}.signature-line{border-top:1px solid #526276;padding-top:8px}.signature strong{display:block;color:#172b45}.signature small{display:block;margin-top:3px;color:#526276;font-size:12px}.date-line{margin-top:12px;color:#526276;font-size:13px}.note{margin-top:24px;color:#718096;font-size:12px}.print:hover{background:#c99b3e}@media(max-width:600px){.page{width:calc(100% - 16px);min-height:0;margin:8px auto;padding:22px}.signatures{gap:16px}.signature small{font-size:11px}}@page{size:A4;margin:0}@media print{body{background:#fff}.toolbar{display:none}.page{width:210mm;min-height:297mm;margin:0;padding:16mm;box-shadow:none}.signatures{margin-top:42px}}</style></head><body><div class="toolbar"><button class="print" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button><button class="close" onclick="window.close()">ปิดตัวอย่าง</button></div><main class="page"><header class="brand"><div class="eyebrow">KASETSART UNIVERSITY</div><h1>คำขอใช้บริการผลิตและบริการสื่อ</h1><p>สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์</p></header><section class="request-head"><h2>หมายเลขคำขอ '+esc(booking.id)+'</h2><span class="status">'+esc(statusLabels[booking.status]||booking.status||statusLabels.Pending)+'</span></section><table>'+rows+'</table><section class="signatures"><div class="signature"><div class="signature-space"></div><div class="signature-line"><strong>นายสุวิทย์ คำแสง</strong><small>นักวิชาการโสตทัศนศึกษา ชำนาญการ</small><small>หัวหน้าฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้</small><small>ผู้อนุมัติงาน</small></div><div class="date-line">วันที่ .......... / .......... / ..........</div></div><div class="signature"><div class="signature-space"></div><div class="signature-line"><strong>ลงชื่อ ........................................................</strong><small>ผู้รับงาน</small></div><div class="date-line">วันที่ .......... / .......... / ..........</div></div></section><p class="note">เอกสารนี้จัดทำเพื่อประกอบการพิจารณาและดำเนินงานบริการ ไม่ใช่ใบเสร็จรับเงินหรือใบกำกับภาษี</p></main></body></html>');
+    preview.document.close();preview.focus();
+  }catch(error){preview.close();beepError('เปิดตัวอย่าง PDF ไม่สำเร็จ: '+error.message)}
+}
 $('#trackBtn').onclick=async()=>{let id=$('#trackId').value.trim();if(!id)return;try{let r=await api('getBooking',{id});let b=r.booking;$('#trackResult').innerHTML='<h3>'+b.id+'</h3><p><b>'+b.event+'</b></p><p>วันที่ '+b.date+' เวลา '+b.start+'–'+b.end+'</p><p>สถานะ: <span class="status">'+b.status+'</span></p><p>'+ (b.adminNote||'')+'</p>'}catch(e){$('#trackResult').textContent=e.message}};
 function monthValue_(date){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')}
 function shiftCalendarMonth_(offset){const parts=$('#calendarMonth').value.split('-').map(Number);if(parts.length!==2||!parts[0]||!parts[1])return;const date=new Date(parts[0],parts[1]-1+offset,1);$('#calendarMonth').value=monthValue_(date);loadCalendar()}
@@ -471,6 +494,7 @@ async function loadAdmin(){
         try{await api('updateStatus',{token:adminToken,id:b.id,status:next,adminNote});await loadAdmin()}
         catch(error){select.value=previous;select.disabled=false;saveMessage.textContent='บันทึกไม่สำเร็จ';beepError(error.message)}
       };
+      const pdfButton=document.createElement('button');pdfButton.type='button';pdfButton.className='btn-light';pdfButton.textContent='ดู / ดาวน์โหลด PDF';pdfButton.setAttribute('aria-label','ดูหรือดาวน์โหลด PDF คำขอ '+b.id);pdfButton.onclick=()=>openAdminRequestPreview_(b);
       const deleteButton=document.createElement('button');deleteButton.type='button';deleteButton.className='btn-danger';deleteButton.textContent='ลบคำขอ';deleteButton.setAttribute('aria-label','ลบคำขอ '+b.id);
       deleteButton.onclick=async()=>{
         if(!confirm('ยืนยันลบคำขอ '+b.id+' ของ '+b.name+' หรือไม่? การลบไม่สามารถย้อนกลับได้'))return;
@@ -478,7 +502,7 @@ async function loadAdmin(){
         try{await api('removeBooking',{token:adminToken,id:b.id});await loadAdmin()}
         catch(error){deleteButton.disabled=false;saveMessage.textContent='ลบไม่สำเร็จ';beepError(error.message)}
       };
-      actionCell.append(select,deleteButton,saveMessage);tr.appendChild(actionCell);rows.appendChild(tr);
+      actionCell.append(select,pdfButton,deleteButton,saveMessage);tr.appendChild(actionCell);rows.appendChild(tr);
     });
     if(!adminData.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.className='empty';td.textContent='ยังไม่มีคำขอใช้บริการ';tr.appendChild(td);rows.appendChild(tr)}
   }catch(error){const rows=$('#adminRows'),tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.textContent='โหลดข้อมูลไม่สำเร็จ: '+error.message;tr.appendChild(td);rows.replaceChildren(tr)}
