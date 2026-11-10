@@ -12,7 +12,7 @@ const STATUSES = ['Pending','Approved / Quoted','Rejected','In Progress','Comple
 const SERVICE_LABELS = {studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์'};
 const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)'};
 const PORTFOLIO_CATEGORY_BY_SERVICE = {studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing'};
-const PORTFOLIO_HEADERS = ['id','createdAt','category','title','description','fileId','active'];
+const PORTFOLIO_HEADERS = ['id','createdAt','category','title','description','fileId','active','position'];
 const MAX_PORTFOLIO_IMAGE_BYTES = 5 * 1024 * 1024;
 const PROP = PropertiesService.getScriptProperties();
 
@@ -88,6 +88,7 @@ function route_(q){
     case 'removeAdminEmail': return removeAdminEmail_(q);
     case 'adminPortfolio': auth_(q.token); return {items:portfolioItems_(false)};
     case 'savePortfolioItem': return savePortfolioItem_(q);
+    case 'reorderPortfolioItems': return reorderPortfolioItems_(q);
     case 'deletePortfolioItem': return deletePortfolioItem_(q);
     case 'removeBooking': return removeBooking_(q);
     case 'health': return {ok:true,spreadsheet:!!PROP.getProperty('SHEET_ID'),drive:!!PROP.getProperty('DRIVE_FOLDER_ID')};
@@ -274,18 +275,32 @@ function removeAdminEmail_(q){
 function portfolioSheet_(){
   const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID')),sheet=ss.getSheetByName('Portfolio');
   if(!sheet)throw new Error('ไม่พบชีต Portfolio กรุณารัน setup() ใน Apps Script ก่อน');
+  portfolioOrderColumn_(sheet);
   return sheet;
+}
+function portfolioOrderColumn_(sheet){
+  const width=sheet.getLastColumn(),headers=sheet.getRange(1,1,1,Math.max(1,width)).getValues()[0].map(value=>String(value||'').trim().toLowerCase());
+  let column=headers.indexOf('position')+1;
+  if(!column){column=width+1;sheet.getRange(1,column).setValue('position')}
+  const lastRow=sheet.getLastRow();
+  if(lastRow>1){
+    const range=sheet.getRange(2,column,lastRow-1,1),values=range.getValues();
+    let changed=false;
+    values.forEach((row,index)=>{if(row[0]===''||row[0]==null){row[0]=index;changed=true}});
+    if(changed)range.setValues(values);
+  }
+  return column;
 }
 function portfolioCategory_(category){return PORTFOLIO_CATEGORIES[category]?category:(PORTFOLIO_CATEGORY_BY_SERVICE[category]||category)}
 function portfolioImageUrl_(fileId){return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(fileId)+'&sz=w1200'}
 function portfolioItems_(publicOnly){
-  const sheet=portfolioSheet_(),values=sheet.getDataRange().getValues();
+  const sheet=portfolioSheet_(),orderColumn=portfolioOrderColumn_(sheet),values=sheet.getDataRange().getValues();
   return values.slice(1).filter(row=>row[0]&&(!publicOnly||row[6]!==false)).map(row=>({
     id:String(row[0]),createdAt:row[1],category:portfolioCategory_(String(row[2]||'')),title:String(row[3]||''),
     description:String(row[4]||''),fileId:String(row[5]||''),
     imageUrl:portfolioImageUrl_(String(row[5]||'')),
-    active:row[6]!==false
-  })).filter(item=>item.fileId);
+    active:row[6]!==false,position:Number(row[orderColumn-1])
+  })).filter(item=>item.fileId).sort((a,b)=>a.position-b.position);
 }
 function savePortfolioItem_(q){
   auth_(q.token);
@@ -314,11 +329,28 @@ function savePortfolioItem_(q){
   }else if(!fileId){
     throw new Error('กรุณาเลือกรูปผลงาน');
   }
+  const orderColumn=portfolioOrderColumn_(sheet),orderValues=sheet.getRange(2,orderColumn,Math.max(1,sheet.getLastRow()-1),1).getValues();
+  const position=existing?Number(existing[orderColumn-1]):Math.max(-1,...orderValues.map(value=>Number(value[0])||0))+1;
   const row=[id||Utilities.getUuid(),existing?existing[1]:new Date(),category,title,description,fileId,true];
   if(existing)sheet.getRange(rowIndex+1,1,1,row.length).setValues([row]);
   else sheet.appendRow(row);
+  sheet.getRange(existing?rowIndex+1:sheet.getLastRow(),orderColumn).setValue(position);
   if(existing&&existing[5]&&existing[5]!==fileId)DriveApp.getFileById(String(existing[5])).setTrashed(true);
-  return {ok:true,item:{id:row[0],createdAt:row[1],category,title,description,fileId,imageUrl:portfolioImageUrl_(fileId),active:true}};
+  return {ok:true,item:{id:row[0],createdAt:row[1],category,title,description,fileId,imageUrl:portfolioImageUrl_(fileId),active:true,position}};
+}
+function reorderPortfolioItems_(q){
+  auth_(q.token);
+  const ids=q.ids;
+  if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string'||!id)||new Set(ids).size!==ids.length)throw new Error('ลำดับผลงานไม่ถูกต้อง');
+  const lock=LockService.getScriptLock();lock.waitLock(12000);
+  try{
+    const sheet=portfolioSheet_(),values=sheet.getDataRange().getValues(),existingIds=values.slice(1).filter(row=>row[0]).map(row=>String(row[0]));
+    if(ids.length!==existingIds.length||ids.some(id=>!existingIds.includes(id)))throw new Error('รายการผลงานมีการเปลี่ยนแปลง กรุณาโหลดรายการใหม่แล้วลองอีกครั้ง');
+    const orderColumn=portfolioOrderColumn_(sheet),positions=new Map(ids.map((id,index)=>[id,index]));
+    const ordered=values.slice(1).filter(row=>row[0]).map(row=>[positions.get(String(row[0]))]);
+    if(ordered.length)sheet.getRange(2,orderColumn,ordered.length,1).setValues(ordered);
+    return {ok:true};
+  }finally{lock.releaseLock()}
 }
 function deletePortfolioItem_(q){
   auth_(q.token);

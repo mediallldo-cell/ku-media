@@ -23,6 +23,11 @@
 .admin-feature h3{margin:0 0 8px;color:var(--navy);font-size:17px}
 .portfolio-admin-list,.admin-email-list{display:grid;gap:10px;margin-top:14px}
 .portfolio-admin-item,.admin-email-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.portfolio-admin-item{cursor:grab}
+.portfolio-admin-item:active{cursor:grabbing}
+.portfolio-admin-item.is-dragging{opacity:.45}
+.portfolio-admin-item.is-drop-target{border-color:var(--blue);box-shadow:0 0 0 2px #1d568833}
+.portfolio-drag-handle{flex:none;padding:7px 10px;background:#e8eef4;color:var(--navy);font-size:18px;line-height:1;cursor:grab}
 .portfolio-admin-item img{width:64px;height:52px;object-fit:cover;border-radius:6px}
 .portfolio-admin-info{display:flex;align-items:center;gap:12px;min-width:0}
 .portfolio-admin-info span{overflow-wrap:anywhere}
@@ -131,7 +136,7 @@ td,th{font-size:14px}
 <footer>สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>ระบบคำขอใช้บริการผลิตและบริการสื่อ</footer></main>
 <div id="modal" class="modal hidden"><div class="dialog"><div id="modalBody"></div><div class="actions"><button class="btn-primary" id="modalClose">ปิดหน้าต่าง</button><button class="btn-light hidden" id="downloadPdf">ดาวน์โหลดสรุปคำขอ</button></div></div></div>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbx07u5bfdZDVbmAs3HjGCvbbWyruOPVoGR1fd-FT9UAZX1uU1J_yg6QjxdxSCYDPiSrVQ/exec';let currentRequest=null,adminData=[],adminEmails=[],portfolioData=[],adminToken=null,calendarRequest=0,portfolioImageTrigger=null;
+const API_URL='https://script.google.com/macros/s/AKfycbx07u5bfdZDVbmAs3HjGCvbbWyruOPVoGR1fd-FT9UAZX1uU1J_yg6QjxdxSCYDPiSrVQ/exec';let currentRequest=null,adminData=[],adminEmails=[],portfolioData=[],adminToken=null,calendarRequest=0,portfolioImageTrigger=null,portfolioOrderSaving=false;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const services={studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์'};
 const portfolioCategories={studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)'};
@@ -319,18 +324,36 @@ function renderAdminEmails(){
 async function loadAdminPortfolio_(){
   const list=$('#portfolioAdminList'),message=$('#portfolioAdminMessage');if(!list)return;
   message.textContent='กำลังโหลดผลงาน...';
-  try{const response=await api('adminPortfolio',{token:adminToken});portfolioData=response.items||[];renderAdminPortfolio_();message.textContent=portfolioData.length?'':'ยังไม่มีผลงานในคลัง'}
+  try{const response=await api('adminPortfolio',{token:adminToken});portfolioData=response.items||[];renderAdminPortfolio_();message.textContent=portfolioData.length?'ลากแถวเพื่อเปลี่ยนลำดับการแสดงผลงาน':'ยังไม่มีผลงานในคลัง'}
   catch(error){message.textContent='โหลดผลงานไม่สำเร็จ: '+error.message;list.replaceChildren()}
 }
 function renderAdminPortfolio_(){
   const list=$('#portfolioAdminList');list.replaceChildren();
   portfolioData.forEach(item=>{
-    const row=document.createElement('div'),info=document.createElement('div'),image=document.createElement('img'),label=document.createElement('span'),actions=document.createElement('div'),edit=document.createElement('button'),remove=document.createElement('button');
-    row.className='portfolio-admin-item';info.className='portfolio-admin-info';image.src=item.imageUrl;image.alt=item.title;label.textContent=(portfolioCategories[portfolioCategory_(item.category)]||item.category)+' · '+item.title;info.append(image,label);
+    const row=document.createElement('div'),handle=document.createElement('button'),info=document.createElement('div'),image=document.createElement('img'),label=document.createElement('span'),actions=document.createElement('div'),edit=document.createElement('button'),remove=document.createElement('button');
+    row.className='portfolio-admin-item';row.draggable=!portfolioOrderSaving;row.dataset.portfolioId=item.id;
+    handle.type='button';handle.className='portfolio-drag-handle';handle.textContent='☷';handle.title='ลากเพื่อเปลี่ยนลำดับ';handle.setAttribute('aria-label','ลากเพื่อเปลี่ยนลำดับ '+item.title);
+    info.className='portfolio-admin-info';image.src=item.imageUrl;image.alt=item.title;label.textContent=(portfolioCategories[portfolioCategory_(item.category)]||item.category)+' · '+item.title;info.append(image,label);
     actions.className='actions';edit.type='button';edit.className='btn-light';edit.textContent='แก้ไข';edit.onclick=()=>editPortfolioItem_(item);
     remove.type='button';remove.className='btn-danger';remove.textContent='ลบ';remove.onclick=async()=>{if(!confirm('ลบผลงาน “'+item.title+'” ออกจากคลัง?'))return;remove.disabled=true;try{await api('deletePortfolioItem',{token:adminToken,id:item.id});await loadAdminPortfolio_()}catch(error){remove.disabled=false;$('#portfolioAdminMessage').textContent='ลบผลงานไม่สำเร็จ: '+error.message}};
-    actions.append(edit,remove);row.append(info,actions);list.appendChild(row);
+    row.addEventListener('dragstart',event=>{if(portfolioOrderSaving){event.preventDefault();return}row.classList.add('is-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item.id)});
+    row.addEventListener('dragend',()=>{row.classList.remove('is-dragging');list.querySelectorAll('.is-drop-target').forEach(element=>element.classList.remove('is-drop-target'))});
+    row.addEventListener('dragover',event=>{event.preventDefault();const dragging=list.querySelector('.is-dragging');if(!dragging||dragging===row)return;row.classList.add('is-drop-target');const after=event.clientY>row.getBoundingClientRect().top+row.offsetHeight/2;list.insertBefore(dragging,after?row.nextSibling:row)});
+    row.addEventListener('dragleave',event=>{if(!row.contains(event.relatedTarget))row.classList.remove('is-drop-target')});
+    row.addEventListener('drop',event=>{event.preventDefault();row.classList.remove('is-drop-target');savePortfolioOrder_()});
+    actions.append(edit,remove);row.append(handle,info,actions);list.appendChild(row);
   });
+}
+async function savePortfolioOrder_(){
+  if(portfolioOrderSaving)return;
+  const list=$('#portfolioAdminList'),message=$('#portfolioAdminMessage'),ids=[...list.querySelectorAll('.portfolio-admin-item')].map(row=>row.dataset.portfolioId);
+  if(ids.length===portfolioData.length&&ids.every((id,index)=>id===portfolioData[index].id))return;
+  const previous=portfolioData.slice(),itemsById=new Map(previous.map(item=>[item.id,item]));
+  if(ids.length!==previous.length||ids.some(id=>!itemsById.has(id))){renderAdminPortfolio_();message.textContent='จัดลำดับไม่สำเร็จ: รายการผลงานไม่ครบ กรุณาโหลดรายการใหม่';return}
+  portfolioData=ids.map(id=>itemsById.get(id));portfolioOrderSaving=true;message.textContent='กำลังบันทึกลำดับผลงาน...';renderPublicPortfolio_();
+  try{await api('reorderPortfolioItems',{token:adminToken,ids});message.textContent='บันทึกลำดับผลงานเรียบร้อยแล้ว'}
+  catch(error){portfolioData=previous;renderPublicPortfolio_();renderAdminPortfolio_();message.textContent='บันทึกลำดับไม่สำเร็จ: '+error.message}
+  finally{portfolioOrderSaving=false;[...list.querySelectorAll('.portfolio-admin-item')].forEach(row=>row.draggable=true)}
 }
 function editPortfolioItem_(item){
   $('#portfolioEditId').value=item.id;$('#portfolioAdminCategory').value=portfolioCategory_(item.category);$('#portfolioAdminTitle').value=item.title;$('#portfolioAdminDescription').value=item.description||'';$('#portfolioAdminImage').value='';$('#portfolioImageHint').textContent='เลือกรูปใหม่เพื่อแทนรูปเดิม หรือเว้นว่างเพื่อใช้รูปปัจจุบัน';
