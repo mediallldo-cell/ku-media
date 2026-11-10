@@ -147,8 +147,18 @@ function escapeHtmlClient(value){return String(value==null?'':value).replace(/[&
 function sound(ok){try{const c=new(window.AudioContext||window.webkitAudioContext)();[0,1,2].forEach((n)=>{let o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=ok?[523,659,784][n]:[330,260,190][n];g.gain.setValueAtTime(.0001,c.currentTime+n*.12);g.gain.exponentialRampToValueAtTime(.08,c.currentTime+n*.12+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+n*.12+.18);o.start(c.currentTime+n*.12);o.stop(c.currentTime+n*.12+.2)})}catch(e){}}
 function showModal(html,request=false){$('#modalBody').innerHTML=html;$('#modal').classList.remove('hidden');$('#downloadPdf').classList.toggle('hidden',!request)}
 $('#modalClose').onclick=()=>$('#modal').classList.add('hidden');
-$$('.tab').forEach(b=>b.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===b));['booking','track','calendar','admin','portfolio'].forEach(id=>$('#'+id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='calendar')loadCalendar();if(b.dataset.tab==='portfolio')loadPortfolio();if(b.dataset.tab==='admin'){}});
+function activateTab_(tabId,remember=true){
+  const tab=$$('.tab').find(button=>button.dataset.tab===tabId);
+  if(!tab)tabId='booking';
+  $$('.tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===tabId));
+  ['booking','track','calendar','admin','portfolio'].forEach(id=>$('#'+id).classList.toggle('hidden',id!==tabId));
+  if(remember){try{localStorage.setItem('kuMediaActiveTab',tabId)}catch(error){console.warn('ไม่สามารถจำแท็บที่เปิดอยู่ได้',error)}}
+  if(tabId==='calendar')loadCalendar();
+  if(tabId==='portfolio')loadPortfolio();
+}
+$$('.tab').forEach(button=>button.onclick=()=>activateTab_(button.dataset.tab));
 const today=new Date();$('#serviceDate').min=new Date(today.getTime()+7*864e5).toISOString().slice(0,10);$('#calendarMonth').value=monthValue_(today);
+activateTab_((()=>{try{return localStorage.getItem('kuMediaActiveTab')||'booking'}catch(error){return 'booking'}})(),false);
 $$('input[name=services],#hours,#photoDuration,#editMinutes,#singleDuration').forEach(x=>x.addEventListener('change',calc));
 $('#hours').oninput=calc;$('#editMinutes').oninput=calc;
 function calc(){let sum=0,notes=[];$$('input[name=services]:checked').forEach(x=>{let id=x.value,p=+x.dataset.price;if(x.dataset.unit==='hour'){let h=Math.max(1,Math.ceil(+$(' #hours'.trim()).value||1));sum+=id==='studio_pro'?5000+(h-1)*1000:id==='studio_basic'?3000+(h-1)*500:h*1000;if(id==='audio')notes.push('บันทึกเสียงคิดตามการประเมิน 350–1,000 บาท/ชม.')}else if(id==='photo')sum+=$('#photoDuration').value==='full'?3500:2000;else if(id==='single_cam')sum+=$('#singleDuration').value==='short'?5000:7000;else if(id==='editing')sum+=Math.max(1,+$('#editMinutes').value||1)*1000;else sum+=p});$('#total').textContent=sum.toLocaleString('th-TH')+' บาท';$('#priceNote').textContent=notes.join(' · ')||'ราคาประมาณการก่อนตรวจสอบโดยเจ้าหน้าที่ · เศษของชั่วโมงคิดเป็นหนึ่งชั่วโมง';return sum}calc();
