@@ -362,5 +362,16 @@ function deletePortfolioItem_(q){
   sheet.deleteRow(rowIndex+1);
   return {ok:true};
 }
-function removeBooking_(q){auth_(q.token);const sh=sheet_(),v=sh.getDataRange().getValues(),i=v.findIndex((r,n)=>n>0&&String(r[0])===String(q.id));if(i<1)throw Error('ไม่พบคำขอ');sh.deleteRow(i+1);return {ok:true}}
+function removeBooking_(q){
+  auth_(q.token);
+  const id=String(q.id||''),sh=sheet_(),values=sh.getDataRange().getValues(),index=values.findIndex((row,n)=>n>0&&String(row[0])===id);
+  if(index<1)throw Error('ไม่พบคำขอ');
+  const queue=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID')).getSheetByName('MailQueue');
+  if(queue){
+    const queued=queue.getDataRange().getValues();
+    for(let row=queued.length-1;row>0;row--)if(String(queued[row][1])===id&&queued[row][4]==='QUEUED')queue.deleteRow(row+1);
+  }
+  sh.deleteRow(index+1);
+  return {ok:true};
+}
 function sha256_(s){return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,s,Utilities.Charset.UTF_8).map(b=>(b+256).toString(16).slice(-2)).join('')}
