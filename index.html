@@ -75,6 +75,11 @@
 .status-select{min-width:140px}
 .admin-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
 .admin-action-button{padding:6px 10px;border-radius:6px;font-size:12px;line-height:1.35;white-space:nowrap}
+.password-input-wrap{position:relative;width:100%}
+.password-input-wrap input{padding-right:44px}
+.password-toggle{position:absolute;top:50%;right:8px;display:grid;place-items:center;width:30px;height:30px;padding:4px;transform:translateY(-50%);border:0;border-radius:6px;background:transparent;color:var(--muted)}
+.password-toggle:hover,.password-toggle:focus-visible{background:#e8eef4;color:var(--navy)}
+.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .submit-status{min-height:24px;margin-top:10px;color:var(--blue);font-size:14px}
 .submit-status.error{color:var(--red)}
 body{font-size:16px}
@@ -188,6 +193,16 @@ const statusLabels={Pending:'รอตรวจสอบ', 'Approved / Quoted':'
 function escapeHtmlClient(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function sound(ok){try{const c=new(window.AudioContext||window.webkitAudioContext)();[0,1,2].forEach((n)=>{let o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=ok?[523,659,784][n]:[330,260,190][n];g.gain.setValueAtTime(.0001,c.currentTime+n*.12);g.gain.exponentialRampToValueAtTime(.08,c.currentTime+n*.12+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+n*.12+.18);o.start(c.currentTime+n*.12);o.stop(c.currentTime+n*.12+.2)})}catch(e){}}
 function showModal(html,request=false){$('#modalBody').innerHTML=html;$('#modal').classList.remove('hidden');$('#downloadPdf').classList.toggle('hidden',!request)}
+function addPasswordToggle_(input){
+  if(!input||input.parentElement.classList.contains('password-input-wrap'))return;
+  const wrapper=document.createElement('div'),button=document.createElement('button');
+  wrapper.className='password-input-wrap';button.type='button';button.className='password-toggle';button.setAttribute('aria-label','แสดงรหัสผ่าน');button.setAttribute('aria-pressed','false');button.title='แสดงรหัสผ่าน';
+  const eye='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+  const hiddenEye='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8"></path><path d="M9.9 5.2A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.8M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7a10.5 10.5 0 0 0 3-.4"></path></svg>';
+  input.parentNode.insertBefore(wrapper,input);wrapper.append(input,button);button.innerHTML=eye;
+  button.onclick=()=>{const show=input.type==='password';input.type=show?'text':'password';button.setAttribute('aria-label',show?'ซ่อนรหัสผ่าน':'แสดงรหัสผ่าน');button.setAttribute('aria-pressed',String(show));button.title=show?'ซ่อนรหัสผ่าน':'แสดงรหัสผ่าน';button.innerHTML=show?hiddenEye:eye;input.focus()};
+}
+addPasswordToggle_($('#adminPassword'));
 $('#modalClose').onclick=()=>$('#modal').classList.add('hidden');
 function askRejectionNote_(booking){
   return new Promise(resolve=>{
@@ -358,7 +373,7 @@ $('#forgotBtn').onclick=()=>{
       await api('forgotPassword',{email});
       showModal('<h2>📩 ตรวจสอบอีเมลของคุณ</h2><p>หากอีเมลนี้เป็นบัญชีผู้ดูแลที่ได้รับอนุญาต ระบบจะส่งรหัส OTP ให้ กรุณาตรวจสอบกล่องจดหมายและจดหมายขยะ</p><div class="field"><label>อีเมลผู้ดูแล</label><input id="resetEmail" type="email" value="'+email.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" readonly></div><div class="field" style="margin-top:10px"><label>รหัส OTP 6 หลัก</label><input id="resetOtp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="กรอกรหัส 6 หลัก"></div><div class="field" style="margin-top:10px"><label>รหัสผ่านใหม่ (อย่างน้อย 12 ตัวอักษร)</label><input id="resetPassword" type="password" autocomplete="new-password" minlength="12" placeholder="รหัสผ่านใหม่"></div><div class="field" style="margin-top:10px"><label>ยืนยันรหัสผ่านใหม่</label><input id="resetPassword2" type="password" autocomplete="new-password" minlength="12" placeholder="กรอกรหัสผ่านอีกครั้ง"></div><div class="actions"><button class="btn-primary" id="resetPasswordBtn">ยืนยันและเปลี่ยนรหัสผ่าน</button></div>');
       $('#resetPassword').minLength=6;$('#resetPassword').previousElementSibling.textContent='รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)';
-      $('#resetPassword2').minLength=6;
+      $('#resetPassword2').minLength=6;addPasswordToggle_($('#resetPassword'));addPasswordToggle_($('#resetPassword2'));
       $('#resetPasswordBtn').onclick=async()=>{
         const otp=$('#resetOtp').value.trim(),password=$('#resetPassword').value,password2=$('#resetPassword2').value;
         if(!/^\d{6}$/.test(otp))return beepError('กรุณากรอกรหัส OTP 6 หลัก');

@@ -204,10 +204,10 @@ function login_(q){
 // The password is entered in a prompt and only its SHA-256 hash is stored.
 function resetAdminPassword(){
   const ui=SpreadsheetApp.getUi();
-  const response=ui.prompt('ตั้งรหัสผ่านผู้ดูแลใหม่','กรอกรหัสผ่านใหม่ (อย่างน้อย 12 ตัวอักษร)',ui.ButtonSet.OK_CANCEL);
+  const response=ui.prompt('ตั้งรหัสผ่านผู้ดูแลใหม่','กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)',ui.ButtonSet.OK_CANCEL);
   if(response.getSelectedButton()!==ui.Button.OK)return;
   const password=response.getResponseText();
-  if(password.length<12)throw new Error('รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร');
+  if(password.length<6)throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
   PROP.setProperty('ADMIN_PASSWORD_HASH',sha256_(password));
   ui.alert('บันทึก hash รหัสผ่านใหม่แล้ว กรุณาทดลองเข้าสู่ระบบ');
 }
