@@ -7,13 +7,14 @@
  * ADMIN_PASSWORD_HASH = lowercase SHA-256 hex digest of a unique password.
  * Example (Mac/Linux): printf %s 'YOUR-UNIQUE-PASSWORD' | shasum -a 256
  */
-const HEADERS = ['id','createdAt','name','department','phone','email','date','event','project','location','start','end','requirements','services','serviceNames','estimate','payment','paymentDetail','taxInvoice','taxName','taxId','taxAddress','status','adminNote','driveFolderUrl','receiptUrl'];
+const HEADERS = ['id','createdAt','name','department','phone','email','date','event','project','location','start','end','requirements','services','serviceNames','estimate','payment','paymentDetail','taxInvoice','taxName','taxId','taxAddress','status','adminNote','driveFolderUrl','receiptUrl','graphicsDetails'];
 const STATUSES = ['Pending','Approved / Quoted','Rejected','In Progress','Completed'];
-const SERVICE_LABELS = {studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์'};
-const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)'};
-const PORTFOLIO_CATEGORY_BY_SERVICE = {studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing'};
+const SERVICE_LABELS = {studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์',poster_a0_lam:'พิมพ์โปสเตอร์ A0 เคลือบสติกเกอร์',poster_a0_plain:'พิมพ์โปสเตอร์ A0 ไม่เคลือบสติกเกอร์',poster_a1_lam:'พิมพ์โปสเตอร์ A1 เคลือบสติกเกอร์',poster_a1_plain:'พิมพ์โปสเตอร์ A1 ไม่เคลือบสติกเกอร์',poster_a2_lam:'พิมพ์โปสเตอร์ A2 เคลือบสติกเกอร์',poster_a2_plain:'พิมพ์โปสเตอร์ A2 ไม่เคลือบสติกเกอร์',vinyl_plain:'พิมพ์ป้ายไวนิล ไม่ซีลขอบ',vinyl_eyelet:'พิมพ์ป้ายไวนิล ซีลขอบและตอกตาไก่',sticker_basic:'สติกเกอร์ผิวด้าน-มัน',sticker_matte:'สติกเกอร์เคลือบด้าน',foam_3:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 3 มม.',foam_4:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 4 มม.',foam_5:'ติดสติกเกอร์ลงโฟมบอร์ด 5 มม.',plaswood_3:'ติดสติกเกอร์ลงพลาสวูด 3 มม.',plaswood_4:'ติดสติกเกอร์ลงพลาสวูด 4 มม.'};
+const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)',graphics:'งานกราฟิกสื่อสิ่งพิมพ์'};
+const PORTFOLIO_CATEGORY_BY_SERVICE = {studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing',poster_a0_lam:'graphics',poster_a0_plain:'graphics',poster_a1_lam:'graphics',poster_a1_plain:'graphics',poster_a2_lam:'graphics',poster_a2_plain:'graphics',vinyl_plain:'graphics',vinyl_eyelet:'graphics',sticker_basic:'graphics',sticker_matte:'graphics',foam_3:'graphics',foam_4:'graphics',foam_5:'graphics',plaswood_3:'graphics',plaswood_4:'graphics'};
 const PORTFOLIO_HEADERS = ['id','createdAt','category','title','description','fileId','active','position'];
 const MAX_PORTFOLIO_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_SIGNATURE_BYTES = 1024 * 1024;
 const PROP = PropertiesService.getScriptProperties();
 
 function setup() {
@@ -37,6 +38,14 @@ function setup() {
     folderId=folder.getId(); PROP.setProperty('DRIVE_FOLDER_ID',folderId);
   }
   const ssObj = SpreadsheetApp.openById(ssId);
+  const bookingsSheet=ssObj.getSheetByName('Bookings');
+  if(bookingsSheet){
+    const headerValues=bookingsSheet.getRange(1,1,1,Math.max(1,bookingsSheet.getLastColumn())).getValues()[0].map(value=>String(value||'').trim());
+    if(!headerValues.includes('graphicsDetails')){
+      const newColumn=bookingsSheet.getLastColumn()+1;
+      bookingsSheet.getRange(1,newColumn).setValue('graphicsDetails').setFontWeight('bold').setBackground('#102d4f').setFontColor('#ffffff');
+    }
+  }
   if (!ssObj.getSheetByName('MailQueue')) { const q=ssObj.insertSheet('MailQueue'); q.appendRow(['queuedAt','bookingId','recipient','kind','state','lastError']); q.setFrozenRows(1); q.getRange(1,1,1,6).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   if (!ssObj.getSheetByName('Portfolio')) { const p=ssObj.insertSheet('Portfolio'); p.appendRow(PORTFOLIO_HEADERS); p.setFrozenRows(1); p.getRange(1,1,1,PORTFOLIO_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   let galleryFolderId=PROP.getProperty('GALLERY_FOLDER_ID');
@@ -67,7 +76,7 @@ function all_(){
     event:r[7],project:r[8],location:r[9],start:timeString_(r[10]),end:timeString_(r[11]),requirements:r[12],
     services:parse_(r[13]),serviceNames:parse_(r[14]),estimate:Number(r[15]||0),payment:r[16],
     paymentDetail:r[17],taxInvoice:r[18],taxName:r[19],taxId:r[20],taxAddress:r[21],
-    status:r[22],adminNote:r[23],driveFolderUrl:r[24],receiptUrl:r[25]
+    status:r[22],adminNote:r[23],driveFolderUrl:r[24],receiptUrl:r[25],graphicsDetails:String(r[26]||'')
   }));
 }
 function parse_(v){try{return JSON.parse(v||'[]')}catch(_){return []}}
@@ -89,6 +98,9 @@ function route_(q){
     case 'forgotPassword': return forgotPassword_(q);
     case 'resetPassword': return resetPassword_(q);
     case 'adminList': auth_(q.token); return {bookings:all_(),adminEmails:adminEmails_()};
+    case 'adminSignature': return getAdminSignature_(q);
+    case 'saveAdminSignature': return saveAdminSignature_(q);
+    case 'deleteAdminSignature': return deleteAdminSignature_(q);
     case 'updateStatus': return updateStatus_(q);
     case 'addAdminEmail': return addAdminEmail_(q);
     case 'removeAdminEmail': return removeAdminEmail_(q);
@@ -100,6 +112,53 @@ function route_(q){
     case 'health': return {ok:true,spreadsheet:!!PROP.getProperty('SHEET_ID'),drive:!!PROP.getProperty('DRIVE_FOLDER_ID')};
     default: throw Error('ไม่รู้จักคำสั่ง API');
   }
+}
+function signatureFolder_(){
+  let folderId=PROP.getProperty('SIGNATURE_FOLDER_ID');
+  if(!folderId){
+    const rootId=PROP.getProperty('DRIVE_FOLDER_ID');
+    if(!rootId)throw new Error('ยังไม่ได้ตั้งค่าโฟลเดอร์จัดเก็บ กรุณารัน setup() ใน Apps Script');
+    folderId=DriveApp.getFolderById(rootId).createFolder('ลายเซ็นผู้อนุมัติ (ส่วนตัว)').getId();
+    PROP.setProperty('SIGNATURE_FOLDER_ID',folderId);
+  }
+  return DriveApp.getFolderById(folderId);
+}
+function getAdminSignature_(q){
+  auth_(q.token);
+  const fileId=PROP.getProperty('APPROVER_SIGNATURE_FILE_ID');
+  if(!fileId)return {ok:true,signature:null};
+  const blob=DriveApp.getFileById(fileId).getBlob(),mimeType=blob.getContentType(),bytes=blob.getBytes();
+  if(mimeType!=='image/png'||bytes.length>MAX_SIGNATURE_BYTES)throw new Error('ไฟล์ลายเซ็นที่จัดเก็บไม่ถูกต้องหรือมีขนาดใหญ่เกิน 1 MB');
+  return {ok:true,signature:{mimeType,dataUrl:'data:'+mimeType+';base64,'+Utilities.base64Encode(bytes)}};
+}
+function saveAdminSignature_(q){
+  const actor=auth_(q.token);
+  if(q.authorizationConfirmed!==true)throw new Error('กรุณายืนยันว่าได้รับอนุญาตให้ใช้ลายเซ็นนี้ในเอกสาร');
+  if(q.mimeType!=='image/png'||typeof q.imageData!=='string'||q.imageData.length>Math.ceil(MAX_SIGNATURE_BYTES*4/3)+8||!/^[A-Za-z0-9+/]+={0,2}$/.test(q.imageData))throw new Error('กรุณาอัปโหลดไฟล์ลายเซ็น PNG ที่ถูกต้อง ขนาดไม่เกิน 1 MB');
+  const bytes=Utilities.base64Decode(q.imageData);
+  if(!bytes.length||bytes.length>MAX_SIGNATURE_BYTES||bytes.length<8||[137,80,78,71,13,10,26,10].some((value,index)=>(bytes[index]+256)%256!==value))throw new Error('ไฟล์ลายเซ็น PNG ไม่ถูกต้องหรือมีขนาดใหญ่เกิน 1 MB');
+  const oldFileId=PROP.getProperty('APPROVER_SIGNATURE_FILE_ID');
+  const file=signatureFolder_().createFile(Utilities.newBlob(bytes,'image/png','approver-signature.png'));
+  PROP.setProperty('APPROVER_SIGNATURE_FILE_ID',file.getId());
+  PROP.setProperty('APPROVER_SIGNATURE_AUTHORIZED_AT',new Date().toISOString());
+  PROP.setProperty('APPROVER_SIGNATURE_AUTHORIZED_BY',actor);
+  let warning='';
+  if(oldFileId&&oldFileId!==file.getId()){
+    try{DriveApp.getFileById(oldFileId).setTrashed(true)}
+    catch(error){warning='เปลี่ยนลายเซ็นแล้ว แต่ไม่สามารถนำไฟล์ลายเซ็นเดิมไปถังขยะได้: '+String(error.message||error)}
+  }
+  return {ok:true,warning};
+}
+function deleteAdminSignature_(q){
+  auth_(q.token);
+  const fileId=PROP.getProperty('APPROVER_SIGNATURE_FILE_ID');
+  if(!fileId)return {ok:true};
+  PROP.deleteProperty('APPROVER_SIGNATURE_FILE_ID');
+  PROP.deleteProperty('APPROVER_SIGNATURE_AUTHORIZED_AT');
+  PROP.deleteProperty('APPROVER_SIGNATURE_AUTHORIZED_BY');
+  try{DriveApp.getFileById(fileId).setTrashed(true)}
+  catch(error){return {ok:true,warning:'ลบลายเซ็นออกจากระบบแล้ว แต่ไม่สามารถนำไฟล์เดิมไปถังขยะได้: '+String(error.message||error)}}
+  return {ok:true};
 }
 function create_(b){
   if(!b||!b.name||!b.email||!b.phone||!b.date||!b.start||!b.end||!b.services||!b.services.length)throw Error('ข้อมูลคำขอไม่ครบ');
@@ -118,7 +177,7 @@ function create_(b){
     b.status='Pending';
     const newRow=lastRow+1,phone=String(b.phone).trim();
     sh.getRange(newRow,5).setNumberFormat('@');
-    sh.appendRow([b.id,b.createdAt,b.name,b.department||'',phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','']);
+    sh.appendRow([b.id,b.createdAt,b.name,b.department||'',phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','',String(b.graphicsDetails||'').trim()]);
     sh.getRange(newRow,5).setNumberFormat('@').setValue(phone);
     // Queue the PDF and email; do not make the applicant wait for Gmail/Drive.
     const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
@@ -243,9 +302,10 @@ function emailHtml_(b,pdfUrl,adminCopy,update){
   const greeting=update?'อัปเดตสถานะคำขอใช้บริการ':adminCopy?'มีคำขอใช้บริการผลิตและบริการสื่อรายการใหม่':'ระบบได้รับคำขอใช้บริการของท่านเรียบร้อยแล้ว';
   const intro=update?'เรียน คุณ'+esc(b.name)+' ระบบได้อัปเดตสถานะคำขอของท่านแล้ว':adminCopy?'โปรดตรวจสอบรายละเอียดและดำเนินการตามขั้นตอน':'เรียน คุณ'+esc(b.name)+' ขอบคุณที่ส่งคำขอผ่านระบบออนไลน์';
   const note=update&&update.adminNote?'<div style="background:#fff9eb;border:1px solid #f1dfb8;border-radius:10px;padding:14px 16px;margin:18px 0"><div style="font-weight:700;color:#765615">ข้อความจากเจ้าหน้าที่</div><div style="line-height:1.8;margin-top:5px">'+esc(update.adminNote)+'</div></div>':'';
+  const graphicsDetails=b.graphicsDetails?'<div style="background:#f7f9fc;border:1px solid #e8edf3;border-radius:10px;padding:12px 14px;margin:14px 0;white-space:pre-wrap"><strong>รายละเอียดงานกราฟิก/สื่อสิ่งพิมพ์</strong><br>'+esc(b.graphicsDetails)+'</div>':'';
   const pdfButton=update&&pdfUrl?'<div style="text-align:center;margin:24px 0"><a href="'+esc(pdfUrl)+'" style="display:inline-block;background:#d9ad55;color:#172b45;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px">เปิดเอกสารสรุปผล</a></div>':'';
   const noteText=update?'สถานะและรายละเอียดคำขอของท่านได้รับการอัปเดตโดยเจ้าหน้าที่ กรุณาเก็บหมายเลขคำขอนี้ไว้เพื่อติดตามสถานะ':'หมายเหตุ: ยอดดังกล่าวเป็นเพียงประมาณการ การให้บริการและค่าใช้จ่ายจะได้รับการยืนยันจากเจ้าหน้าที่อีกครั้ง กรุณาเก็บหมายเลขคำขอนี้ไว้เพื่อติดตามสถานะ';
-  return '<div style="margin:0;background:#f2f5f9;padding:28px 12px;font-family:Arial,Tahoma,sans-serif;color:#172b45"><table role="presentation" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e1e8f0"><tr><td style="padding:26px 30px;background:linear-gradient(120deg,#102d4f,#1d5688);border-bottom:5px solid #d9ad55;color:#fff"><div style="font-size:12px;letter-spacing:1px;color:#dbe8f4">KASETSART UNIVERSITY</div><div style="font-size:22px;font-weight:700;margin-top:7px">บริการผลิตและบริการสื่อ</div><div style="font-size:13px;color:#e3edf6;margin-top:5px">สำนักพัฒนาการเรียนรู้ตลอดชีวิต มหาวิทยาลัยเกษตรศาสตร์</div></td></tr><tr><td style="padding:28px 30px 12px"><div style="font-size:17px;font-weight:700;color:#102d4f">'+greeting+'</div><p style="font-size:14px;line-height:1.8;color:#526276">'+intro+'</p><div style="background:#eef4fa;border:1px solid #dbe7f2;border-radius:12px;padding:17px 20px;margin:18px 0"><div style="font-size:12px;color:#61758a">หมายเลขคำขอ</div><div style="font-size:25px;letter-spacing:1px;font-weight:700;color:#174b78;margin-top:4px">'+esc(b.id)+'</div><span style="display:inline-block;margin-top:10px;'+statusStyle+';padding:5px 12px;border-radius:20px;font-size:13px;font-weight:700">'+esc(statusLabel)+'</span></div><div style="font-size:15px;font-weight:700;color:#102d4f;margin:20px 0 8px">รายละเอียดคำขอ</div><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8edf3;border-radius:10px;overflow:hidden">'+field('ชื่อผู้ขอ',b.name)+field('หน่วยงาน',b.department)+field('โทรศัพท์',b.phone)+field('อีเมล',b.email)+field('กิจกรรม',b.event)+field('วันที่ใช้บริการ',b.date)+field('เวลา',b.start+' – '+b.end)+field('สถานที่',b.location)+field('บริการที่เลือก',service)+field('ประมาณการค่าใช้จ่าย',Number(b.estimate||0).toLocaleString('th-TH')+' บาท')+'</table>'+note+pdfButton+'<p style="font-size:13px;line-height:1.8;color:#718096">'+noteText+'</p></td></tr><tr><td style="padding:18px 30px;background:#f7f9fc;border-top:1px solid #e8edf3;font-size:12px;line-height:1.7;color:#718096">สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>อีเมลฉบับนี้ส่งจากระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้โดยตรง</td></tr></table></div>';
+  return '<div style="margin:0;background:#f2f5f9;padding:28px 12px;font-family:Arial,Tahoma,sans-serif;color:#172b45"><table role="presentation" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e1e8f0"><tr><td style="padding:26px 30px;background:linear-gradient(120deg,#102d4f,#1d5688);border-bottom:5px solid #d9ad55;color:#fff"><div style="font-size:12px;letter-spacing:1px;color:#dbe8f4">KASETSART UNIVERSITY</div><div style="font-size:22px;font-weight:700;margin-top:7px">บริการผลิตและบริการสื่อ</div><div style="font-size:13px;color:#e3edf6;margin-top:5px">สำนักพัฒนาการเรียนรู้ตลอดชีวิต มหาวิทยาลัยเกษตรศาสตร์</div></td></tr><tr><td style="padding:28px 30px 12px"><div style="font-size:17px;font-weight:700;color:#102d4f">'+greeting+'</div><p style="font-size:14px;line-height:1.8;color:#526276">'+intro+'</p><div style="background:#eef4fa;border:1px solid #dbe7f2;border-radius:12px;padding:17px 20px;margin:18px 0"><div style="font-size:12px;color:#61758a">หมายเลขคำขอ</div><div style="font-size:25px;letter-spacing:1px;font-weight:700;color:#174b78;margin-top:4px">'+esc(b.id)+'</div><span style="display:inline-block;margin-top:10px;'+statusStyle+';padding:5px 12px;border-radius:20px;font-size:13px;font-weight:700">'+esc(statusLabel)+'</span></div><div style="font-size:15px;font-weight:700;color:#102d4f;margin:20px 0 8px">รายละเอียดคำขอ</div><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8edf3;border-radius:10px;overflow:hidden">'+field('ชื่อผู้ขอ',b.name)+field('หน่วยงาน',b.department)+field('โทรศัพท์',b.phone)+field('อีเมล',b.email)+field('กิจกรรม',b.event)+field('วันที่ใช้บริการ',b.date)+field('เวลา',b.start+' – '+b.end)+field('สถานที่',b.location)+field('บริการที่เลือก',service)+field('ประมาณการค่าใช้จ่าย',Number(b.estimate||0).toLocaleString('th-TH')+' บาท')+'</table>'+graphicsDetails+note+pdfButton+'<p style="font-size:13px;line-height:1.8;color:#718096">'+noteText+'</p></td></tr><tr><td style="padding:18px 30px;background:#f7f9fc;border-top:1px solid #e8edf3;font-size:12px;line-height:1.7;color:#718096">สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>อีเมลฉบับนี้ส่งจากระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้โดยตรง</td></tr></table></div>';
 }
 function sendBookingEmail_(b){
   MailApp.sendEmail({to:b.email,subject:'ยืนยันรับคำขอ '+b.id+' | บริการผลิตและบริการสื่อ มก.',body:'ระบบได้รับคำขอ '+b.id+' แล้ว สถานะรอเจ้าหน้าที่ตรวจสอบ',htmlBody:emailHtml_(b,'',false),name:'KU Media Service'});
@@ -255,7 +315,7 @@ function notifyAdminsHtml_(b){
 }
 function makePdf_(b,title){
   const folder=DriveApp.getFolderById(PROP.getProperty('DRIVE_FOLDER_ID'));
-  const rows=[['รหัสคำขอ',b.id],['ชื่อผู้ขอ',b.name],['หน่วยงาน',b.department||'-'],['โทรศัพท์',b.phone],['อีเมล',b.email],['กิจกรรม',b.event],['วันที่',b.date],['เวลา',b.start+'–'+b.end],['บริการ',(b.serviceNames||[]).join(', ')],['ยอดประมาณการ',Number(b.estimate||0).toLocaleString()+' บาท'],['สถานะ',b.status||'Pending']];
+  const rows=[['รหัสคำขอ',b.id],['ชื่อผู้ขอ',b.name],['หน่วยงาน',b.department||'-'],['โทรศัพท์',b.phone],['อีเมล',b.email],['กิจกรรม',b.event],['วันที่',b.date],['เวลา',b.start+'–'+b.end],['บริการ',(b.serviceNames||[]).join(', ')],['รายละเอียดงานกราฟิก/สื่อสิ่งพิมพ์',b.graphicsDetails||'-'],['ยอดประมาณการ',Number(b.estimate||0).toLocaleString()+' บาท'],['สถานะ',b.status||'Pending']];
   const html='<html><meta charset="utf-8"><body style="font-family:Arial;padding:32px"><h2>'+title+'</h2><h3>สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.</h3><table border="1" cellpadding="8" cellspacing="0">'+rows.map(r=>'<tr><td>'+escapeHtml_(r[0])+'</td><td>'+escapeHtml_(r[1])+'</td></tr>').join('')+'</table><p>เอกสารนี้เป็นเอกสารสรุปคำขอ ไม่ใช่ใบเสร็จรับเงินหรือใบกำกับภาษี</p></body></html>';
   const blob=Utilities.newBlob(html,'text/html','summary.html').getAs('application/pdf').setName(b.id+'-'+title+'.pdf');
   const file=folder.createFile(blob);file.setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.VIEW);return file;
