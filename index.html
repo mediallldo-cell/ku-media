@@ -90,7 +90,7 @@ td,th{font-size:14px}
 @media(max-width:650px){.chart-row{grid-template-columns:minmax(105px,1fr) minmax(70px,1fr) 38px;gap:8px}.chart-label{font-size:13px}.admin-chart{padding:14px}}
 .brand-logos{display:flex;align-items:center;gap:8px;flex:none}
 .brand-logo-ku,.brand-logo-spro{display:block;object-fit:contain;flex:none}
-.brand-logo-ku{width:84px;height:84px;filter:brightness(1.9) drop-shadow(0 0 2px #ffffff66)}
+.brand-logo-ku{width:84px;height:84px;filter:drop-shadow(0 0 2px #ffffff66)}
 .brand-logo-spro{width:112px;height:84px}
 @media(max-width:650px){.brand-logos{gap:4px}.brand-logo-ku{width:58px;height:58px}.brand-logo-spro{width:78px;height:58px}}
 .service-dropdown{border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden}
@@ -108,7 +108,7 @@ td,th{font-size:14px}
 .location-detail{margin-top:-2px}
 .admin-signature-preview{display:block;max-width:320px;max-height:120px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px;background:repeating-conic-gradient(#f7f9fc 0% 25%,#fff 0% 50%) 50% / 16px 16px;object-fit:contain}
 </style>
-<header><div class="brand"><div class="brand-logos"><img class="brand-logo-ku" src="assets/ku-symbol-transparent.png" alt="ตรามหาวิทยาลัยเกษตรศาสตร์"><img class="brand-logo-spro" src="assets/spro-logo.png" alt="โลโก้สำนักพัฒนาการเรียนรู้ตลอดชีวิต"></div><div><h1>แบบขอรับบริการ (ส.1)</h1><div class="sub">Audio Visual Services Request Form (S1)<br>ฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ · สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.<br>โทร. 0 2942 8820 – 4 · ภายใน 61 1336-9 ต่อ 500 · <a href="http://www.llldo.ku.ac.th" style="color:inherit">http://www.llldo.ku.ac.th</a></div></div></div></header>
+<header><div class="brand"><div class="brand-logos"><img class="brand-logo-ku" src="assets/ku-symbol-white-transparent.png" alt="ตรามหาวิทยาลัยเกษตรศาสตร์"><img class="brand-logo-spro" src="assets/spro-logo.png" alt="โลโก้สำนักพัฒนาการเรียนรู้ตลอดชีวิต"></div><div><h1>แบบขอรับบริการ (ส.1)</h1><div class="sub">Audio Visual Services Request Form (S1)<br>ฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ · สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.<br>โทร. 0 2942 8820 – 4 · ภายใน 61 1336-9 ต่อ 500 · <a href="http://www.llldo.ku.ac.th" style="color:inherit">http://www.llldo.ku.ac.th</a></div></div></div></header>
 <main class="wrap"><nav class="tabs"><button class="tab active" data-tab="booking">📝 ยื่นคำขอใช้บริการ</button><button class="tab" data-tab="track">🔎 ติดตามคำขอ</button><button class="tab" data-tab="calendar">📅 ปฏิทินคิวบริการ</button><button class="tab" data-tab="portfolio"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:4px" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg>คลังผลงาน</button><button class="tab" data-tab="admin">🔐 เจ้าหน้าที่</button></nav>
 <section id="booking">
 <form id="bookingForm">
@@ -636,7 +636,8 @@ async function loadAdmin(){
         try{await api('updateStatus',{token:adminToken,id:b.id,status:next,adminNote});await loadAdmin()}
         catch(error){select.value=previous;select.disabled=false;saveMessage.textContent='บันทึกไม่สำเร็จ';beepError(error.message)}
       };
-      const pdfButton=document.createElement('button');pdfButton.type='button';pdfButton.className='btn-light';pdfButton.textContent='ดู / ดาวน์โหลด PDF';pdfButton.setAttribute('aria-label','ดูหรือดาวน์โหลด PDF คำขอ '+b.id);pdfButton.onclick=()=>openAdminRequestPreview_(b);
+      const pdfButton=document.createElement('button');pdfButton.type='button';pdfButton.className='btn-light';pdfButton.textContent='ดู PDF / พิมพ์';pdfButton.setAttribute('aria-label','ดูหรือพิมพ์ PDF คำขอ '+b.id);pdfButton.onclick=()=>openAdminRequestPreview_(b);
+      const downloadPdfButton=document.createElement('button');downloadPdfButton.type='button';downloadPdfButton.className='btn-light';downloadPdfButton.textContent='ดาวน์โหลด PDF';downloadPdfButton.setAttribute('aria-label','ดาวน์โหลด PDF คำขอ '+b.id);downloadPdfButton.onclick=async()=>{downloadPdfButton.disabled=true;const originalText=downloadPdfButton.textContent;downloadPdfButton.textContent='กำลังสร้าง PDF...';try{const result=await api('adminPdf',{token:adminToken,id:b.id}),binary=atob(result.data),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:result.mimeType||'application/pdf'})),link=document.createElement('a');link.href=url;link.download=result.filename||'KU-Media-Request-'+b.id+'.pdf';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(error){beepError('ดาวน์โหลด PDF ไม่สำเร็จ: '+error.message)}finally{downloadPdfButton.disabled=false;downloadPdfButton.textContent=originalText}};
       const deleteButton=document.createElement('button');deleteButton.type='button';deleteButton.className='btn-danger';deleteButton.textContent='ลบคำขอ';deleteButton.setAttribute('aria-label','ลบคำขอ '+b.id);
       deleteButton.onclick=async()=>{
         if(!confirm('ยืนยันลบคำขอ '+b.id+' ของ '+b.name+' หรือไม่? การลบไม่สามารถย้อนกลับได้'))return;
@@ -644,7 +645,7 @@ async function loadAdmin(){
         try{await api('removeBooking',{token:adminToken,id:b.id});await loadAdmin()}
         catch(error){deleteButton.disabled=false;saveMessage.textContent='ลบไม่สำเร็จ';beepError(error.message)}
       };
-      actionCell.append(select,pdfButton,deleteButton,saveMessage);tr.appendChild(actionCell);rows.appendChild(tr);
+      actionCell.append(select,pdfButton,downloadPdfButton,deleteButton,saveMessage);tr.appendChild(actionCell);rows.appendChild(tr);
     });
     if(!adminData.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.className='empty';td.textContent='ยังไม่มีคำขอใช้บริการ';tr.appendChild(td);rows.appendChild(tr)}
   }catch(error){const rows=$('#adminRows'),tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.textContent='โหลดข้อมูลไม่สำเร็จ: '+error.message;tr.appendChild(td);rows.replaceChildren(tr)}
