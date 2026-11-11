@@ -89,10 +89,24 @@ function phoneString_(v){
   if(typeof v==='number'&&Number.isFinite(v)){phone=String(Math.trunc(v));if(/^\d{8,9}$/.test(phone))phone='0'+phone}
   return phone;
 }
+function sheetSafeValue_(value){
+  if(typeof value==='string'&&/^[\s\u200B\uFEFF]*[=+\-@]/.test(value))return "'"+value;
+  return value;
+}
+function newBookingId_(){
+  return 'KU-'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMM')+'-'+Utilities.getUuid().replace(/-/g,'').toUpperCase();
+}
+function getBooking_(q){
+  const id=String(q.id||'').trim(),email=String(q.email||'').trim().toLowerCase();
+  if(!id||!email)throw new Error('กรุณากรอกรหัสคำขอและอีเมลที่ใช้ยื่นคำขอ');
+  const booking=all_().find(item=>item.id===id&&String(item.email||'').trim().toLowerCase()===email);
+  if(!booking)throw new Error('ไม่พบคำขอหรือข้อมูลยืนยันไม่ถูกต้อง');
+  return {booking:{id:booking.id,event:booking.event,date:booking.date,start:booking.start,end:booking.end,status:booking.status,adminNote:booking.adminNote}};
+}
 function route_(q){
   switch(q.action){
     case 'createBooking': return create_(q.booking);
-    case 'getBooking': {const b=all_().find(x=>x.id===q.id);if(!b)throw Error('ไม่พบรหัสคำขอ');return {booking:{id:b.id,event:b.event,date:b.date,start:b.start,end:b.end,status:b.status,adminNote:b.adminNote,receiptUrl:b.receiptUrl}}}
+    case 'getBooking': return getBooking_(q);
     case 'publicCalendar': return {bookings:publicCalendarItems_(q.month)};
     case 'publicPortfolio': return {items:portfolioItems_(true)};
     case 'adminLogin': return login_(q);
@@ -183,14 +197,15 @@ function createWithStatus_(b,status,queueNotification){
     }
     if(clashes.length)throw Error('ช่วงเวลานี้มีรายการที่อนุมัติแล้ว กรุณาติดต่อเจ้าหน้าที่หรือเลือกเวลาใหม่');
     b.status=status;
+    b.id=newBookingId_();
     const newRow=lastRow+1,phone=String(b.phone).trim();
     sh.getRange(newRow,5).setNumberFormat('@');
-    sh.appendRow([b.id,b.createdAt,b.name,b.department||'',phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','',String(b.graphicsDetails||'').trim()]);
-    sh.getRange(newRow,5).setNumberFormat('@').setValue(phone);
+    sh.appendRow([b.id,new Date(),b.name,b.department||'',phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','',String(b.graphicsDetails||'').trim()].map(sheetSafeValue_));
+    sh.getRange(newRow,5).setNumberFormat('@').setValue(sheetSafeValue_(phone));
     // Queue the PDF and email; do not make the applicant wait for Gmail/Drive.
     if(queueNotification){
       const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
-      ss.getSheetByName('MailQueue').appendRow([new Date(),b.id,b.email,'newBooking','QUEUED','']);
+      ss.getSheetByName('MailQueue').appendRow([new Date(),b.id,b.email,'newBooking','QUEUED',''].map(sheetSafeValue_));
     }
     return {ok:true,id:b.id,emailSent:false,notificationQueued:queueNotification};
   } finally {lock.releaseLock()}
@@ -217,7 +232,7 @@ function createCalendarEvent_(q){
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||end<=start)throw new Error('กรุณาระบุช่วงเวลาให้ถูกต้อง');
   if(!title||title.length>120||notes.length>500)throw new Error('ชื่อรายการต้องมี 1–120 ตัวอักษร และหมายเหตุไม่เกิน 500 ตัวอักษร');
   const sheet=calendarEventsSheet_(true),id='EV-'+Utilities.getUuid();
-  sheet.appendRow([id,date,start,end,title,notes,actor,new Date()]);
+  sheet.appendRow([id,date,start,end,title,notes,actor,new Date()].map(sheetSafeValue_));
   return {ok:true,event:{id,date,start,end,title,notes,eventType:'block'}};
 }
 function deleteCalendarEvent_(q){
@@ -239,7 +254,7 @@ function login_(q){
   // Accept the common terminal newline variants used when generating a SHA-256 hash.
   const candidates=[sha256_(password),sha256_(password+'\n'),sha256_(password+'\r\n')].map(x=>x.toLowerCase());
   if(!allowed.includes(email)||!candidates.includes(saved))throw Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-  const token=Utilities.getUuid()+Utilities.getUuid();CacheService.getScriptCache().put('admin:'+token,email,21600);
+  const token=Utilities.getUuid()+Utilities.getUuid();CacheService.getScriptCache().put('admin:'+token,JSON.stringify({email,version:adminSessionVersion_(email)}),21600);
   return {token,expiresIn:21600};
 }
 
@@ -253,6 +268,7 @@ function resetAdminPassword(){
   const password=response.getResponseText();
   if(password.length<6)throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
   PROP.setProperty('ADMIN_PASSWORD_HASH',sha256_(password));
+  adminEmails_().forEach(invalidateAdminSessions_);
   ui.alert('บันทึก hash รหัสผ่านใหม่แล้ว กรุณาทดลองเข้าสู่ระบบ');
 }
 
@@ -304,12 +320,29 @@ function resetPassword_(q){
   const hashes=adminPasswordHashes_();hashes[email]=sha256_(password);
   PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
   PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',adminPasswordSetupRequired_().filter(item=>item!==email).join(','));
+  invalidateAdminSessions_(email);
   if(adminEmails_().every(item=>hashes[item]))PROP.deleteProperty('ADMIN_PASSWORD_HASH');
   cache.remove(otpKey);cache.remove('reset-attempts:'+key);cache.remove('reset-rate:'+key);
   return {ok:true};
 }
 
-function auth_(token){const email=CacheService.getScriptCache().get('admin:'+token);if(!email)throw Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');return email}
+function adminSessionVersion_(email){
+  return Number(PROP.getProperty('ADMIN_SESSION_VERSION_'+sha256_(email))||1);
+}
+function invalidateAdminSessions_(email){
+  const key='ADMIN_SESSION_VERSION_'+sha256_(email),version=adminSessionVersion_(email);
+  if(!Number.isSafeInteger(version)||version<1)throw new Error('ข้อมูลเวอร์ชันเซสชันผู้ดูแลไม่ถูกต้อง');
+  PROP.setProperty(key,String(version+1));
+}
+function auth_(token){
+  const cached=CacheService.getScriptCache().get('admin:'+token);
+  if(!cached)throw Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  let session;
+  try{session=JSON.parse(cached)}catch(_){throw Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่')}
+  const email=String(session.email||'').toLowerCase(),allowed=adminEmails_();
+  if(!email||!allowed.includes(email)||session.version!==adminSessionVersion_(email))throw Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  return email;
+}
 function updateStatus_(q){
   const actor=auth_(q.token);if(!STATUSES.includes(q.status))throw Error('สถานะไม่ถูกต้อง');
   const sh=sheet_(),v=sh.getDataRange().getValues(),i=v.findIndex((r,n)=>n>0&&String(r[0])===String(q.id));if(i<1)throw Error('ไม่พบคำขอ');
@@ -415,6 +448,7 @@ function removeAdminEmail_(q){
   if(!emails.includes(email))throw Error('ไม่พบอีเมลนี้ในรายชื่อผู้รับแจ้งเตือน');
   if(emails.length<=1)throw Error('ต้องมีอีเมลผู้ดูแลอย่างน้อย 1 รายการ');
   const remaining=emails.filter(item=>item!==email);
+  invalidateAdminSessions_(email);
   PROP.setProperty('ADMIN_EMAILS',remaining.join(','));
   const hashes=adminPasswordHashes_();delete hashes[email];PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
   PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',adminPasswordSetupRequired_().filter(item=>item!==email).join(','));
