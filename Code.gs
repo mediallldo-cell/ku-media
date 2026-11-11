@@ -331,21 +331,11 @@ function makePdf_(b,title){
 }
 function adminPdf_(q){
   auth_(q.token);
-  const b=all_().find(item=>item.id===String(q.id||''));
+  const id=String(q.id||''),b=all_().find(item=>item.id===id);
   if(!b)throw new Error('ไม่พบคำขอ');
-  const field=(label,value)=>'<tr><th>'+escapeHtml_(label)+'</th><td>'+escapeHtml_(value==null||value===''?'-':value)+'</td></tr>';
-  const taxInvoice=b.taxInvoice===true||String(b.taxInvoice).toLowerCase()==='true';
-  const taxDetails=taxInvoice?[b.taxName,b.taxId,b.taxAddress].filter(Boolean).join('\n')||'ต้องการใบกำกับภาษี':'ไม่ต้องการ';
-  const rows=[
-    ['รหัสคำขอ',b.id],['ชื่อผู้ขอ',b.name],['หน่วยงาน',b.department],['โทรศัพท์',b.phone],['อีเมล',b.email],
-    ['กิจกรรม / งาน',b.event],['สถานที่',b.location],['วันที่ใช้บริการ',b.date],['เวลาใช้บริการ',(b.start||'')+(b.start&&b.end?' – ':'')+(b.end||'')],
-    ['บริการที่เลือก',(b.serviceNames||[]).join(', ')],['รายละเอียดงาน',b.requirements],
-    ['รายละเอียดงานกราฟิก/สื่อสิ่งพิมพ์',b.graphicsDetails],['ประมาณการค่าใช้จ่าย',Number(b.estimate||0).toLocaleString('th-TH')+' บาท'],
-    ['การชำระเงิน',[b.payment,b.paymentDetail].filter(Boolean).join(' · ')],['ใบกำกับภาษี',taxDetails],['สถานะ',statusLabel_(b.status)],
-    ['ข้อความจากเจ้าหน้าที่',b.adminNote]
-  ].map(row=>field(row[0],row[1])).join('');
-  const html='<html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;color:#172b45;font-size:12px;line-height:1.5"><header style="text-align:center;background:#102d4f;color:#fff;padding:18px;border-bottom:4px solid #d9ad55"><h1 style="font-size:20px;margin:0">แบบขอรับบริการ (ส.1)</h1><div>Audio Visual Services Request Form (S1)</div><div style="margin-top:5px">ฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ · สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.</div><div>โทร. 0 2942 8820 – 4 · ภายใน 61 1336-9 ต่อ 500</div></header><h2 style="text-align:center;font-size:17px;margin:18px 0 3px">คำขอใช้บริการผลิตและบริการสื่อ</h2><p style="text-align:center;margin:0 0 12px">รหัสคำขอ '+escapeHtml_(b.id)+'</p><table style="width:100%;border-collapse:collapse;border:1px solid #dce4ec">'+rows+'</table><section style="margin-top:14px;border:1px solid #cbd6e0;padding:10px"><h3 style="text-align:center;margin:0 0 6px;font-size:13px">บันทึกเจ้าหน้าที่ธุรการ</h3><p>เรียน หัวหน้าฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ เพื่อโปรดพิจารณา</p><p style="margin-top:38px;text-align:right">ลงชื่อ ............................................................ วันที่ ........ / ........ / ........</p><p>ความเห็น / การดำเนินการ: ....................................................................................................................</p></section><section style="margin-top:12px;border:1px solid #cbd6e0;padding:10px"><h3 style="text-align:center;margin:0 0 6px;font-size:13px">บันทึกหัวหน้าฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้</h3><p>ผลการพิจารณา: '+escapeHtml_(statusLabel_(b.status))+'</p><p style="margin-top:32px;text-align:right">ลงชื่อ ............................................................ วันที่ ........ / ........ / ........</p></section><footer style="margin-top:12px;color:#718096;font-size:10px">จัดทำเพื่อประกอบการพิจารณาและบันทึกการให้บริการ</footer></body><style>@page{size:A4;margin:14mm}th,td{padding:6px 8px;border-bottom:1px solid #e8edf3;text-align:left;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{width:29%;background:#f7f9fc;color:#526276;font-weight:600}</style></html>';
-  const filename='KU-Media-Request-'+String(b.id).replace(/[^A-Za-z0-9._-]/g,'_')+'.pdf';
+  const html=String(q.html||'');
+  if(!html.startsWith('<!doctype html>')||html.length>1500000)throw new Error('ไฟล์ PDF ไม่ถูกต้องหรือมีขนาดใหญ่เกินกำหนด');
+  const filename='KU-Media-Request-'+id.replace(/[^A-Za-z0-9._-]/g,'_')+'.pdf';
   const pdf=Utilities.newBlob(html,'text/html','request.html').getAs('application/pdf').setName(filename);
   return {filename,mimeType:'application/pdf',data:Utilities.base64Encode(pdf.getBytes())};
 }

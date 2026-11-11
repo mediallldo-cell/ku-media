@@ -259,7 +259,7 @@ $('#downloadPdf').onclick=()=>{
     w.document.close();w.focus();
   }catch(err){w.close();beepError('เปิดเอกสารสรุปไม่สำเร็จ: '+err.message)}
 };
-function openAdminRequestPreview_(booking){
+async function openAdminRequestPreview_(booking,download=false,downloadButton=null){
   const preview=window.open('','_blank');
   if(!preview){beepError('เบราว์เซอร์บล็อกหน้าต่างตัวอย่าง กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้แล้วลองอีกครั้ง');return}
   const esc=escapeHtmlClient,value=(text)=>text==null||text===''?'-':String(text);
@@ -296,6 +296,16 @@ function openAdminRequestPreview_(booking){
       }
     }
     preview.document.close();preview.focus();
+    if(download){
+      if(downloadButton){downloadButton.disabled=true;downloadButton.textContent='กำลังสร้าง PDF...'}
+      try{
+        const html='<!doctype html>'+preview.document.documentElement.outerHTML;
+        const result=await api('adminPdf',{token:adminToken,id:booking.id,html});
+        const binary=atob(result.data),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:result.mimeType||'application/pdf'})),link=document.createElement('a');
+        link.href=url;link.download=result.filename||'KU-Media-Request-'+booking.id+'.pdf';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      }catch(error){beepError('ดาวน์โหลด PDF ไม่สำเร็จ: '+error.message);preview.close()}
+      finally{if(downloadButton){downloadButton.disabled=false;downloadButton.textContent='ดาวน์โหลด PDF'}}
+    }
   }catch(error){preview.close();beepError('เปิดตัวอย่าง PDF ไม่สำเร็จ: '+error.message)}
 }
 $('#trackBtn').onclick=async()=>{let id=$('#trackId').value.trim();if(!id)return;try{let r=await api('getBooking',{id});let b=r.booking;$('#trackResult').innerHTML='<h3>'+b.id+'</h3><p><b>'+b.event+'</b></p><p>วันที่ '+b.date+' เวลา '+b.start+'–'+b.end+'</p><p>สถานะ: <span class="status">'+b.status+'</span></p><p>'+ (b.adminNote||'')+'</p>'}catch(e){$('#trackResult').textContent=e.message}};
@@ -637,7 +647,7 @@ async function loadAdmin(){
         catch(error){select.value=previous;select.disabled=false;saveMessage.textContent='บันทึกไม่สำเร็จ';beepError(error.message)}
       };
       const pdfButton=document.createElement('button');pdfButton.type='button';pdfButton.className='btn-light';pdfButton.textContent='ดู PDF / พิมพ์';pdfButton.setAttribute('aria-label','ดูหรือพิมพ์ PDF คำขอ '+b.id);pdfButton.onclick=()=>openAdminRequestPreview_(b);
-      const downloadPdfButton=document.createElement('button');downloadPdfButton.type='button';downloadPdfButton.className='btn-light';downloadPdfButton.textContent='ดาวน์โหลด PDF';downloadPdfButton.setAttribute('aria-label','ดาวน์โหลด PDF คำขอ '+b.id);downloadPdfButton.onclick=async()=>{downloadPdfButton.disabled=true;const originalText=downloadPdfButton.textContent;downloadPdfButton.textContent='กำลังสร้าง PDF...';try{const result=await api('adminPdf',{token:adminToken,id:b.id}),binary=atob(result.data),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:result.mimeType||'application/pdf'})),link=document.createElement('a');link.href=url;link.download=result.filename||'KU-Media-Request-'+b.id+'.pdf';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(error){beepError('ดาวน์โหลด PDF ไม่สำเร็จ: '+error.message)}finally{downloadPdfButton.disabled=false;downloadPdfButton.textContent=originalText}};
+      const downloadPdfButton=document.createElement('button');downloadPdfButton.type='button';downloadPdfButton.className='btn-light';downloadPdfButton.textContent='ดาวน์โหลด PDF';downloadPdfButton.setAttribute('aria-label','ดาวน์โหลด PDF คำขอ '+b.id);downloadPdfButton.onclick=()=>openAdminRequestPreview_(b,true,downloadPdfButton);
       const deleteButton=document.createElement('button');deleteButton.type='button';deleteButton.className='btn-danger';deleteButton.textContent='ลบคำขอ';deleteButton.setAttribute('aria-label','ลบคำขอ '+b.id);
       deleteButton.onclick=async()=>{
         if(!confirm('ยืนยันลบคำขอ '+b.id+' ของ '+b.name+' หรือไม่? การลบไม่สามารถย้อนกลับได้'))return;
