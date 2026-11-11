@@ -48,6 +48,7 @@ function setup() {
   }
   if (!ssObj.getSheetByName('MailQueue')) { const q=ssObj.insertSheet('MailQueue'); q.appendRow(['queuedAt','bookingId','recipient','kind','state','lastError']); q.setFrozenRows(1); q.getRange(1,1,1,6).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   if (!ssObj.getSheetByName('Portfolio')) { const p=ssObj.insertSheet('Portfolio'); p.appendRow(PORTFOLIO_HEADERS); p.setFrozenRows(1); p.getRange(1,1,1,PORTFOLIO_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
+  calendarEventsSheet_(true);
   let galleryFolderId=PROP.getProperty('GALLERY_FOLDER_ID');
   if (!galleryFolderId) { galleryFolderId=DriveApp.getFolderById(folderId).createFolder('คลังผลงาน').getId(); PROP.setProperty('GALLERY_FOLDER_ID',galleryFolderId); }
   // Install one lightweight worker. Email/PDF work runs after the booking API has responded.
@@ -92,12 +93,12 @@ function route_(q){
   switch(q.action){
     case 'createBooking': return create_(q.booking);
     case 'getBooking': {const b=all_().find(x=>x.id===q.id);if(!b)throw Error('ไม่พบรหัสคำขอ');return {booking:{id:b.id,event:b.event,date:b.date,start:b.start,end:b.end,status:b.status,adminNote:b.adminNote,receiptUrl:b.receiptUrl}}}
-    case 'publicCalendar': return {bookings:all_().filter(b=>b.date.slice(0,7)===q.month&&['Approved / Quoted','In Progress'].includes(b.status)).map(b=>({id:b.id,date:b.date,start:b.start,end:b.end,serviceNames:b.serviceNames}))};
+    case 'publicCalendar': return {bookings:publicCalendarItems_(q.month)};
     case 'publicPortfolio': return {items:portfolioItems_(true)};
     case 'adminLogin': return login_(q);
     case 'forgotPassword': return forgotPassword_(q);
     case 'resetPassword': return resetPassword_(q);
-    case 'adminList': auth_(q.token); return {bookings:all_(),adminEmails:adminEmails_()};
+    case 'adminList': auth_(q.token); return {bookings:all_(),adminEmails:adminEmails_(),passwordSetupRequired:adminPasswordSetupRequired_(),passwordConfiguredEmails:Object.keys(adminPasswordHashes_())};
     case 'adminPdf': return adminPdf_(q);
     case 'adminSignature': return getAdminSignature_(q);
     case 'saveAdminSignature': return saveAdminSignature_(q);
@@ -105,6 +106,8 @@ function route_(q){
     case 'updateStatus': return updateStatus_(q);
     case 'addAdminEmail': return addAdminEmail_(q);
     case 'removeAdminEmail': return removeAdminEmail_(q);
+    case 'createCalendarEvent': return createCalendarEvent_(q);
+    case 'deleteCalendarEvent': return deleteCalendarEvent_(q);
     case 'adminPortfolio': auth_(q.token); return {items:portfolioItems_(false)};
     case 'savePortfolioItem': return savePortfolioItem_(q);
     case 'reorderPortfolioItems': return reorderPortfolioItems_(q);
@@ -162,8 +165,12 @@ function deleteAdminSignature_(q){
   return {ok:true};
 }
 function create_(b){
+  return createWithStatus_(b,'Pending',true);
+}
+function createWithStatus_(b,status,queueNotification){
   if(!b||!b.name||!b.email||!b.phone||!b.date||!b.start||!b.end||!b.services||!b.services.length)throw Error('ข้อมูลคำขอไม่ครบ');
   if(b.end<=b.start)throw Error('เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น');
+  if(!['Pending','Approved / Quoted'].includes(status))throw Error('สถานะสำหรับสร้างรายการไม่ถูกต้อง');
   const lock=LockService.getScriptLock();lock.waitLock(12000);
   try{
     const sh=sheet_(),lastRow=sh.getLastRow(),clashes=[];
@@ -175,23 +182,60 @@ function create_(b){
       });
     }
     if(clashes.length)throw Error('ช่วงเวลานี้มีรายการที่อนุมัติแล้ว กรุณาติดต่อเจ้าหน้าที่หรือเลือกเวลาใหม่');
-    b.status='Pending';
+    b.status=status;
     const newRow=lastRow+1,phone=String(b.phone).trim();
     sh.getRange(newRow,5).setNumberFormat('@');
     sh.appendRow([b.id,b.createdAt,b.name,b.department||'',phone,b.email,b.date,b.event,b.project||'',b.location||'',b.start,b.end,b.requirements||'',JSON.stringify(b.services),JSON.stringify(b.serviceNames||[]),b.estimate||0,b.payment||'',b.paymentDetail||'',!!b.taxInvoice,b.taxName||'',b.taxId||'',b.taxAddress||'',b.status,'','','',String(b.graphicsDetails||'').trim()]);
     sh.getRange(newRow,5).setNumberFormat('@').setValue(phone);
     // Queue the PDF and email; do not make the applicant wait for Gmail/Drive.
-    const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
-    ss.getSheetByName('MailQueue').appendRow([new Date(),b.id,b.email,'newBooking','QUEUED','']);
-    return {ok:true,id:b.id,emailSent:false,notificationQueued:true};
+    if(queueNotification){
+      const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
+      ss.getSheetByName('MailQueue').appendRow([new Date(),b.id,b.email,'newBooking','QUEUED','']);
+    }
+    return {ok:true,id:b.id,emailSent:false,notificationQueued:queueNotification};
   } finally {lock.releaseLock()}
+}
+
+function calendarEventsSheet_(createIfMissing){
+  const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
+  let sheet=ss.getSheetByName('CalendarEvents');
+  if(!sheet&&createIfMissing){sheet=ss.insertSheet('CalendarEvents');sheet.appendRow(['id','date','start','end','title','notes','createdBy','createdAt']);sheet.setFrozenRows(1)}
+  return sheet;
+}
+function publicCalendarItems_(month){
+  month=String(month||'');
+  if(!/^\d{4}-\d{2}$/.test(month))throw new Error('กรุณาเลือกเดือนให้ถูกต้อง');
+  const bookings=all_().filter(b=>b.date.slice(0,7)===month&&['Approved / Quoted','In Progress'].includes(b.status)).map(b=>({id:b.id,date:b.date,start:b.start,end:b.end,serviceNames:b.serviceNames,services:b.services,eventType:'booking'}));
+  const sheet=calendarEventsSheet_(false);
+  if(!sheet||sheet.getLastRow()<2)return bookings;
+  const events=sheet.getRange(2,1,sheet.getLastRow()-1,8).getValues().filter(row=>String(row[1]||'').slice(0,7)===month).map(row=>({id:String(row[0]),date:dateString_(row[1]),start:timeString_(row[2]),end:timeString_(row[3]),title:String(row[4]||''),notes:String(row[5]||''),eventType:'block'}));
+  return bookings.concat(events);
+}
+function createCalendarEvent_(q){
+  const actor=auth_(q.token),date=String(q.date||''),start=String(q.start||''),end=String(q.end||''),title=String(q.title||'').trim(),notes=String(q.notes||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(new Date(date+'T00:00:00').getTime()))throw new Error('กรุณาระบุวันที่ให้ถูกต้อง');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||end<=start)throw new Error('กรุณาระบุช่วงเวลาให้ถูกต้อง');
+  if(!title||title.length>120||notes.length>500)throw new Error('ชื่อรายการต้องมี 1–120 ตัวอักษร และหมายเหตุไม่เกิน 500 ตัวอักษร');
+  const sheet=calendarEventsSheet_(true),id='EV-'+Utilities.getUuid();
+  sheet.appendRow([id,date,start,end,title,notes,actor,new Date()]);
+  return {ok:true,event:{id,date,start,end,title,notes,eventType:'block'}};
+}
+function deleteCalendarEvent_(q){
+  auth_(q.token);
+  const id=String(q.id||''),sheet=calendarEventsSheet_(false);
+  if(!sheet||sheet.getLastRow()<2)throw new Error('ไม่พบรายการกันคิว');
+  const row=sheet.getRange(2,1,sheet.getLastRow()-1,1).getValues().findIndex(value=>String(value[0])===id);
+  if(row<0)throw new Error('ไม่พบรายการกันคิว');
+  sheet.deleteRow(row+2);
+  return {ok:true};
 }
 
 function login_(q){
   const email=String(q.email||'').trim().toLowerCase();
   const allowed=(PROP.getProperty('ADMIN_EMAILS')||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
   const password=String(q.password||'');
-  const saved=String(PROP.getProperty('ADMIN_PASSWORD_HASH')||'').trim().toLowerCase();
+  const hashes=adminPasswordHashes_(),requiresSetup=adminPasswordSetupRequired_().includes(email);
+  const saved=String(hashes[email]||(requiresSetup?'':PROP.getProperty('ADMIN_PASSWORD_HASH'))||'').trim().toLowerCase();
   // Accept the common terminal newline variants used when generating a SHA-256 hash.
   const candidates=[sha256_(password),sha256_(password+'\n'),sha256_(password+'\r\n')].map(x=>x.toLowerCase());
   if(!allowed.includes(email)||!candidates.includes(saved))throw Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
@@ -257,7 +301,10 @@ function resetPassword_(q){
     cache.put('reset-attempts:'+key,String(attempts+1),300);
     throw new Error('รหัส OTP ไม่ถูกต้อง');
   }
-  PROP.setProperty('ADMIN_PASSWORD_HASH',sha256_(password));
+  const hashes=adminPasswordHashes_();hashes[email]=sha256_(password);
+  PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
+  PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',adminPasswordSetupRequired_().filter(item=>item!==email).join(','));
+  if(adminEmails_().every(item=>hashes[item]))PROP.deleteProperty('ADMIN_PASSWORD_HASH');
   cache.remove(otpKey);cache.remove('reset-attempts:'+key);cache.remove('reset-rate:'+key);
   return {ok:true};
 }
@@ -342,12 +389,23 @@ function adminPdf_(q){
 function escapeHtml_(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function notifyAdmins_(subject,body){(PROP.getProperty('ADMIN_EMAILS')||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(to=>MailApp.sendEmail(to,subject,body))}
 function adminEmails_(){return (PROP.getProperty('ADMIN_EMAILS')||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)}
+function adminPasswordHashes_(){
+  const value=PROP.getProperty('ADMIN_PASSWORD_HASHES');
+  if(!value)return {};
+  const hashes=JSON.parse(value);
+  if(!hashes||Array.isArray(hashes)||typeof hashes!=='object')throw new Error('ข้อมูลรหัสผ่านผู้ดูแลไม่ถูกต้อง');
+  return hashes;
+}
+function adminPasswordSetupRequired_(){return (PROP.getProperty('ADMIN_PASSWORD_SETUP_REQUIRED')||'').split(',').map(email=>email.trim().toLowerCase()).filter(Boolean)}
 function addAdminEmail_(q){
   auth_(q.token);
   const email=String(q.email||'').trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw Error('อีเมลไม่ถูกต้อง');
+  if(!/^[^@\s]+@ku\.th$/.test(email))throw Error('เพิ่มผู้ดูแลได้เฉพาะอีเมล @ku.th');
   const emails=adminEmails_();
-  if(!emails.includes(email))emails.push(email);
+  if(!emails.includes(email)){
+    emails.push(email);
+    PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',[...new Set(adminPasswordSetupRequired_().concat(email))].join(','));
+  }
   PROP.setProperty('ADMIN_EMAILS',emails.join(','));
   return {ok:true,emails};
 }
@@ -358,6 +416,8 @@ function removeAdminEmail_(q){
   if(emails.length<=1)throw Error('ต้องมีอีเมลผู้ดูแลอย่างน้อย 1 รายการ');
   const remaining=emails.filter(item=>item!==email);
   PROP.setProperty('ADMIN_EMAILS',remaining.join(','));
+  const hashes=adminPasswordHashes_();delete hashes[email];PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
+  PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',adminPasswordSetupRequired_().filter(item=>item!==email).join(','));
   return {ok:true,emails:remaining};
 }
 function portfolioSheet_(){
