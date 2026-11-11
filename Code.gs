@@ -8,7 +8,7 @@
  * Example (Mac/Linux): printf %s 'YOUR-UNIQUE-PASSWORD' | shasum -a 256
  */
 const HEADERS = ['id','createdAt','name','department','phone','email','date','event','project','location','start','end','requirements','services','serviceNames','estimate','payment','paymentDetail','taxInvoice','taxName','taxId','taxAddress','status','adminNote','driveFolderUrl','receiptUrl','graphicsDetails'];
-const STATUSES = ['Pending','Approved / Quoted','Rejected','In Progress','Completed'];
+const STATUSES = ['Pending','Approved / Quoted','Rejected','Completed'];
 const SERVICE_LABELS = {studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์',poster_a0_lam:'พิมพ์โปสเตอร์ A0 เคลือบสติกเกอร์',poster_a0_plain:'พิมพ์โปสเตอร์ A0 ไม่เคลือบสติกเกอร์',poster_a1_lam:'พิมพ์โปสเตอร์ A1 เคลือบสติกเกอร์',poster_a1_plain:'พิมพ์โปสเตอร์ A1 ไม่เคลือบสติกเกอร์',poster_a2_lam:'พิมพ์โปสเตอร์ A2 เคลือบสติกเกอร์',poster_a2_plain:'พิมพ์โปสเตอร์ A2 ไม่เคลือบสติกเกอร์',vinyl_plain:'พิมพ์ป้ายไวนิล ไม่ซีลขอบ',vinyl_eyelet:'พิมพ์ป้ายไวนิล ซีลขอบและตอกตาไก่',sticker_basic:'สติกเกอร์ผิวด้าน-มัน',sticker_matte:'สติกเกอร์เคลือบด้าน',foam_3:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 3 มม.',foam_4:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 4 มม.',foam_5:'ติดสติกเกอร์ลงโฟมบอร์ด 5 มม.',plaswood_3:'ติดสติกเกอร์ลงพลาสวูด 3 มม.',plaswood_4:'ติดสติกเกอร์ลงพลาสวูด 4 มม.'};
 const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)',graphics:'งานกราฟิกสื่อสิ่งพิมพ์'};
 const PORTFOLIO_CATEGORY_BY_SERVICE = {studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing',poster_a0_lam:'graphics',poster_a0_plain:'graphics',poster_a1_lam:'graphics',poster_a1_plain:'graphics',poster_a2_lam:'graphics',poster_a2_plain:'graphics',vinyl_plain:'graphics',vinyl_eyelet:'graphics',sticker_basic:'graphics',sticker_matte:'graphics',foam_3:'graphics',foam_4:'graphics',foam_5:'graphics',plaswood_3:'graphics',plaswood_4:'graphics'};
@@ -243,7 +243,7 @@ function resetPassword_(q){
   const password=String(q.password||'');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw new Error('อีเมลไม่ถูกต้อง');
   if(!/^\d{6}$/.test(otp))throw new Error('กรุณากรอกรหัส OTP 6 หลัก');
-  if(password.length<12)throw new Error('รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร');
+  if(password.length<6)throw new Error('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
   const allowed=(PROP.getProperty('ADMIN_EMAILS')||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
   if(!allowed.includes(email))throw new Error('ไม่สามารถยืนยันคำขอได้ กรุณาขอรหัส OTP ใหม่');
   const cache=CacheService.getScriptCache();
@@ -292,7 +292,7 @@ function processMailQueue_(){
   }
 }
 function statusLabel_(status){
-  const labels={'Pending':'รอตรวจสอบ','Approved / Quoted':'อนุมัติแล้ว / เสนอราคา','Rejected':'ไม่อนุมัติ','In Progress':'กำลังดำเนินการ','Completed':'เสร็จสิ้น'};
+  const labels={'Pending':'รอตรวจสอบ','Approved / Quoted':'อนุมัติแล้ว','Rejected':'ไม่อนุมัติ','In Progress':'อนุมัติแล้ว','Completed':'เสร็จสิ้น'};
   return labels[status]||String(status||'ไม่ระบุ');
 }
 function emailHtml_(b,pdfUrl,adminCopy,update){

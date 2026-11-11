@@ -184,7 +184,7 @@ const services={studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:
 const portfolioCategories={studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)',graphics:'งานกราฟิกสื่อสิ่งพิมพ์'};
 const portfolioCategoryByService={studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing',poster_a0_lam:'graphics',poster_a0_plain:'graphics',poster_a1_lam:'graphics',poster_a1_plain:'graphics',poster_a2_lam:'graphics',poster_a2_plain:'graphics',vinyl_plain:'graphics',vinyl_eyelet:'graphics',sticker_basic:'graphics',sticker_matte:'graphics',foam_3:'graphics',foam_4:'graphics',foam_5:'graphics',plaswood_3:'graphics',plaswood_4:'graphics'};
 function portfolioCategory_(category){return portfolioCategories[category]?category:(portfolioCategoryByService[category]||category)}
-const statusLabels={Pending:'รอตรวจสอบ', 'Approved / Quoted':'อนุมัติแล้ว / เสนอราคา',Rejected:'ไม่อนุมัติ','In Progress':'กำลังดำเนินการ',Completed:'เสร็จสิ้น'};
+const statusLabels={Pending:'รอตรวจสอบ', 'Approved / Quoted':'อนุมัติแล้ว',Rejected:'ไม่อนุมัติ','In Progress':'อนุมัติแล้ว',Completed:'เสร็จสิ้น'};
 function escapeHtmlClient(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function sound(ok){try{const c=new(window.AudioContext||window.webkitAudioContext)();[0,1,2].forEach((n)=>{let o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=ok?[523,659,784][n]:[330,260,190][n];g.gain.setValueAtTime(.0001,c.currentTime+n*.12);g.gain.exponentialRampToValueAtTime(.08,c.currentTime+n*.12+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+n*.12+.18);o.start(c.currentTime+n*.12);o.stop(c.currentTime+n*.12+.2)})}catch(e){}}
 function showModal(html,request=false){$('#modalBody').innerHTML=html;$('#modal').classList.remove('hidden');$('#downloadPdf').classList.toggle('hidden',!request)}
@@ -264,7 +264,6 @@ $('#downloadPdf').onclick=()=>{
 async function openAdminRequestPreview_(booking,action='preview',actionButton=null){
   const preview=window.open('','_blank');
   if(!preview){beepError('เบราว์เซอร์บล็อกหน้าต่างตัวอย่าง กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้แล้วลองอีกครั้ง');return}
-  if(action==='print')preview.addEventListener('load',()=>{preview.focus();preview.print()},{once:true});
   const esc=escapeHtmlClient,value=(text)=>text==null||text===''?'-':String(text);
   const services=(booking.serviceNames||[]).join(', ');
   const fields=[
@@ -299,7 +298,7 @@ async function openAdminRequestPreview_(booking,action='preview',actionButton=nu
     }
     preview.document.close();preview.focus();
     if(action==='download'){
-      if(actionButton){actionButton.disabled=true;actionButton.textContent='กำลังสร้าง PDF...'}
+      if(actionButton){actionButton.disabled=true;actionButton.textContent='กำลังโหลด...'}
       try{
         const html='<!doctype html>'+preview.document.documentElement.outerHTML;
         const result=await api('adminPdf',{token:adminToken,id:booking.id,html});
@@ -357,10 +356,12 @@ $('#forgotBtn').onclick=()=>{
     try{
       await api('forgotPassword',{email});
       showModal('<h2>📩 ตรวจสอบอีเมลของคุณ</h2><p>หากอีเมลนี้เป็นบัญชีผู้ดูแลที่ได้รับอนุญาต ระบบจะส่งรหัส OTP ให้ กรุณาตรวจสอบกล่องจดหมายและจดหมายขยะ</p><div class="field"><label>อีเมลผู้ดูแล</label><input id="resetEmail" type="email" value="'+email.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" readonly></div><div class="field" style="margin-top:10px"><label>รหัส OTP 6 หลัก</label><input id="resetOtp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="กรอกรหัส 6 หลัก"></div><div class="field" style="margin-top:10px"><label>รหัสผ่านใหม่ (อย่างน้อย 12 ตัวอักษร)</label><input id="resetPassword" type="password" autocomplete="new-password" minlength="12" placeholder="รหัสผ่านใหม่"></div><div class="field" style="margin-top:10px"><label>ยืนยันรหัสผ่านใหม่</label><input id="resetPassword2" type="password" autocomplete="new-password" minlength="12" placeholder="กรอกรหัสผ่านอีกครั้ง"></div><div class="actions"><button class="btn-primary" id="resetPasswordBtn">ยืนยันและเปลี่ยนรหัสผ่าน</button></div>');
+      $('#resetPassword').minLength=6;$('#resetPassword').previousElementSibling.textContent='รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)';
+      $('#resetPassword2').minLength=6;
       $('#resetPasswordBtn').onclick=async()=>{
         const otp=$('#resetOtp').value.trim(),password=$('#resetPassword').value,password2=$('#resetPassword2').value;
         if(!/^\d{6}$/.test(otp))return beepError('กรุณากรอกรหัส OTP 6 หลัก');
-        if(password.length<12)return beepError('รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร');
+        if(password.length<6)return beepError('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
         if(password!==password2)return beepError('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
         const resetBtn=$('#resetPasswordBtn');resetBtn.disabled=true;resetBtn.textContent='กำลังตรวจสอบ...';
         try{await api('resetPassword',{email:$('#resetEmail').value,otp,password});showModal('<h2>✅ เปลี่ยนรหัสผ่านสำเร็จ</h2><p>คุณสามารถเข้าสู่ระบบเจ้าหน้าที่ด้วยรหัสผ่านใหม่ได้แล้ว</p>')}
@@ -389,7 +390,7 @@ function renderServiceChart(){
     count.className='chart-count';count.textContent=item.count.toLocaleString('th-TH');row.append(label,track,count);chart.appendChild(row);
   });
   $('#statsMonthField').classList.toggle('hidden',periodSelect.value!=='month');
-  $('.admin-chart-head .muted').textContent=periodSelect.value==='month'?'นับจำนวนคำขอที่อนุมัติ กำลังดำเนินการ หรือเสร็จสิ้น ตามเดือนที่เลือก':'นับจำนวนคำขอที่อนุมัติ กำลังดำเนินการ หรือเสร็จสิ้น ตามปีที่ใช้บริการ';
+  $('.admin-chart-head .muted').textContent=periodSelect.value==='month'?'นับจำนวนคำขอที่อนุมัติหรือเสร็จสิ้น ตามเดือนที่เลือก':'นับจำนวนคำขอที่อนุมัติหรือเสร็จสิ้น ตามปีที่ใช้บริการ';
   if(!counts.some(item=>item.count)){const empty=document.createElement('div');empty.className='chart-empty';empty.setAttribute('role','listitem');empty.textContent=periodSelect.value==='month'?'ยังไม่มีคำขอที่อนุมัติในเดือนนี้':'ยังไม่มีคำขอที่อนุมัติสำหรับปีนี้';chart.appendChild(empty)}
 }
 function setupStatsControls_(){
@@ -620,7 +621,7 @@ async function loadAdmin(){
     ensureAdminTools_();renderAdminEmails();await loadAdminSignature_();
     $('#kAll').textContent=adminData.length;
     $('#kPending').textContent=adminData.filter(x=>x.status==='Pending').length;
-    $('#kApproved').textContent=adminData.filter(x=>x.status==='Approved / Quoted').length;
+    $('#kApproved').textContent=adminData.filter(x=>['Approved / Quoted','In Progress'].includes(x.status)).length;
     $('#kRevenue').textContent='฿'+adminData.reduce((s,x)=>s+(+x.estimate||0),0).toLocaleString('th-TH');
     renderServiceChart();
     const rows=$('#adminRows');rows.replaceChildren();
@@ -633,8 +634,8 @@ async function loadAdmin(){
       const statusCell=document.createElement('td'),status=document.createElement('span');status.className='status';status.textContent=statusLabels[b.status]||b.status||'—';statusCell.appendChild(status);tr.appendChild(statusCell);
       const actionCell=document.createElement('td'),select=document.createElement('select'),saveMessage=document.createElement('span');
       select.className='status-select';select.dataset.id=b.id;select.setAttribute('aria-label','เปลี่ยนสถานะคำขอ '+b.id);
-      Object.entries(statusLabels).forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option)});
-      select.value=statusLabels[b.status]?b.status:'Pending';saveMessage.className='status-save';saveMessage.setAttribute('aria-live','polite');
+      Object.entries(statusLabels).filter(([value])=>value!=='In Progress').forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option)});
+      select.value=b.status==='In Progress'?'Approved / Quoted':statusLabels[b.status]?b.status:'Pending';saveMessage.className='status-save';saveMessage.setAttribute('aria-live','polite');
       select.onchange=async()=>{
         const previous=b.status||'Pending',next=select.value;
         if(next===previous)return;
@@ -651,7 +652,6 @@ async function loadAdmin(){
       };
       const actions=document.createElement('div');actions.className='admin-actions';
       const previewButton=document.createElement('button');previewButton.type='button';previewButton.className='btn-light admin-action-button';previewButton.textContent='ดู PDF';previewButton.setAttribute('aria-label','ดู PDF คำขอ '+b.id);previewButton.onclick=()=>openAdminRequestPreview_(b);
-      const printButton=document.createElement('button');printButton.type='button';printButton.className='btn-light admin-action-button';printButton.textContent='พิมพ์';printButton.setAttribute('aria-label','พิมพ์ PDF คำขอ '+b.id);printButton.onclick=()=>openAdminRequestPreview_(b,'print');
       const downloadPdfButton=document.createElement('button');downloadPdfButton.type='button';downloadPdfButton.className='btn-light admin-action-button';downloadPdfButton.textContent='ดาวน์โหลด PDF';downloadPdfButton.setAttribute('aria-label','ดาวน์โหลด PDF คำขอ '+b.id);downloadPdfButton.onclick=()=>openAdminRequestPreview_(b,'download',downloadPdfButton);
       const deleteButton=document.createElement('button');deleteButton.type='button';deleteButton.className='btn-danger admin-action-button';deleteButton.textContent='ลบคำขอ';deleteButton.setAttribute('aria-label','ลบคำขอ '+b.id);
       deleteButton.onclick=async()=>{
@@ -660,7 +660,7 @@ async function loadAdmin(){
         try{await api('removeBooking',{token:adminToken,id:b.id});await loadAdmin()}
         catch(error){deleteButton.disabled=false;saveMessage.textContent='ลบไม่สำเร็จ';beepError(error.message)}
       };
-      actions.append(previewButton,printButton,downloadPdfButton,deleteButton);
+      actions.append(previewButton,downloadPdfButton,deleteButton);
       actionCell.append(select,actions,saveMessage);tr.appendChild(actionCell);rows.appendChild(tr);
     });
     if(!adminData.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.className='empty';td.textContent='ยังไม่มีคำขอใช้บริการ';tr.appendChild(td);rows.appendChild(tr)}
