@@ -13,6 +13,8 @@ const STATUSES = ['Pending','Approved / Quoted','Rejected','Completed'];
 const PRIMARY_ADMIN_EMAIL = 'media.llldo@ku.th';
 const ADMIN_AUDIT_HEADERS = ['timestamp','actor','action','target','details'];
 const ADMIN_ACTIVITY_HEADERS = ['sessionHash','email','startedAt','lastSeenAt','state'];
+const SURVEY_HEADERS = ['submittedAt','category','rating','recommendation'];
+const SURVEY_RATINGS = {5:'ดีมาก',4:'ดี',3:'ปานกลาง',2:'พอใช้',1:'ปรับปรุง'};
 const GRAPHICS_ONLY_ADMIN_EMAILS = ['tassawan.d@ku.th'];
 const SERVICE_LABELS = {studio_pro:'Studio LLLdo Full HD',studio_basic:'Studio LLLdo',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',still_photo:'บันทึกภาพนิ่ง',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์',e_poster:'ออกแบบกราฟิก e-Poster',poster_a0_lam:'พิมพ์โปสเตอร์ A0 เคลือบสติกเกอร์',poster_a0_plain:'พิมพ์โปสเตอร์ A0 ไม่เคลือบสติกเกอร์',poster_a1_lam:'พิมพ์โปสเตอร์ A1 เคลือบสติกเกอร์',poster_a1_plain:'พิมพ์โปสเตอร์ A1 ไม่เคลือบสติกเกอร์',poster_a2_lam:'พิมพ์โปสเตอร์ A2 เคลือบสติกเกอร์',poster_a2_plain:'พิมพ์โปสเตอร์ A2 ไม่เคลือบสติกเกอร์',vinyl_plain:'พิมพ์ป้ายไวนิล ไม่ซีลขอบ',vinyl_eyelet:'พิมพ์ป้ายไวนิล ซีลขอบและตอกตาไก่',sticker_basic:'สติกเกอร์ผิวด้าน-มัน',sticker_matte:'สติกเกอร์เคลือบด้าน',foam_3:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 3 มม.',foam_4:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 4 มม.',foam_5:'ติดสติกเกอร์ลงโฟมบอร์ด 5 มม.',plaswood_3:'ติดสติกเกอร์ลงพลาสวูด 3 มม.',plaswood_4:'ติดสติกเกอร์ลงพลาสวูด 4 มม.'};
 const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio LLLdo) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)',graphics:'งานกราฟิกสื่อสิ่งพิมพ์'};
@@ -54,6 +56,7 @@ function setup() {
   if (!ssObj.getSheetByName('MailQueue')) { const q=ssObj.insertSheet('MailQueue'); q.appendRow(['queuedAt','bookingId','recipient','kind','state','lastError']); q.setFrozenRows(1); q.getRange(1,1,1,6).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   if (!ssObj.getSheetByName('AdminAudit')) { const a=ssObj.insertSheet('AdminAudit'); a.appendRow(ADMIN_AUDIT_HEADERS); a.setFrozenRows(1); a.getRange(1,1,1,ADMIN_AUDIT_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   if (!ssObj.getSheetByName('AdminActivity')) { const a=ssObj.insertSheet('AdminActivity'); a.appendRow(ADMIN_ACTIVITY_HEADERS); a.setFrozenRows(1); a.getRange(1,1,1,ADMIN_ACTIVITY_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
+  if (!ssObj.getSheetByName('SatisfactionSurvey')) { const s=ssObj.insertSheet('SatisfactionSurvey'); s.appendRow(SURVEY_HEADERS); s.setFrozenRows(1); s.getRange(1,1,1,SURVEY_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   if (!ssObj.getSheetByName('Portfolio')) { const p=ssObj.insertSheet('Portfolio'); p.appendRow(PORTFOLIO_HEADERS); p.setFrozenRows(1); p.getRange(1,1,1,PORTFOLIO_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   calendarEventsSheet_(true);
   let galleryFolderId=PROP.getProperty('GALLERY_FOLDER_ID');
@@ -115,17 +118,49 @@ function getBooking_(q){
   if(!booking)throw new Error('ไม่พบคำขอหรือข้อมูลยืนยันไม่ถูกต้อง');
   return {booking:{id:booking.id,event:booking.event,date:booking.date,start:booking.start,end:booking.end,status:booking.status,adminNote:booking.adminNote}};
 }
+function surveySheet_(){
+  const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
+  let sheet=ss.getSheetByName('SatisfactionSurvey');
+  if(!sheet){sheet=ss.insertSheet('SatisfactionSurvey');sheet.appendRow(SURVEY_HEADERS);sheet.setFrozenRows(1)}
+  return sheet;
+}
+function submitSurvey_(q){
+  const category=String(q.category||'').trim(),rating=Number(q.rating),recommendation=String(q.recommendation||'').trim();
+  if(!Object.prototype.hasOwnProperty.call(PORTFOLIO_CATEGORIES,category))throw new Error('กรุณาเลือกประเภทบริการที่ต้องการประเมิน');
+  if(!Number.isInteger(rating)||!Object.prototype.hasOwnProperty.call(SURVEY_RATINGS,rating))throw new Error('กรุณาเลือกคะแนนความพึงพอใจ');
+  if(recommendation.length>1000)throw new Error('ข้อแนะนำต้องไม่เกิน 1,000 ตัวอักษร');
+  const lock=LockService.getScriptLock();lock.waitLock(12000);
+  try{
+    surveySheet_().appendRow([new Date(),category,rating,sheetSafeValue_(recommendation)]);
+    return {ok:true};
+  }finally{lock.releaseLock()}
+}
+function adminSurveyStats_(){
+  const sheet=surveySheet_(),rows=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,SURVEY_HEADERS.length).getValues():[];
+  const responses=rows.filter(row=>row[0]).map(row=>({
+    submittedAt:row[0],category:String(row[1]||''),rating:Number(row[2]),ratingLabel:SURVEY_RATINGS[Number(row[2])]||'',recommendation:String(row[3]||'').replace(/^'(?=[\s\u200B\uFEFF]*[=+\-@])/,'')
+  }));
+  const categories=Object.entries(PORTFOLIO_CATEGORIES).map(([id,label])=>{
+    const categoryResponses=responses.filter(response=>response.category===id),ratingCounts={};
+    Object.keys(SURVEY_RATINGS).forEach(rating=>{ratingCounts[rating]=categoryResponses.filter(response=>response.rating===Number(rating)).length});
+    const average=categoryResponses.length?categoryResponses.reduce((total,response)=>total+response.rating,0)/categoryResponses.length:0;
+    return {id,label,count:categoryResponses.length,average,ratingCounts};
+  });
+  return {total:responses.length,categories,responses};
+}
 function route_(q){
   switch(q.action){
     case 'createBooking': return create_(q.booking);
     case 'getBooking': return getBooking_(q);
     case 'publicCalendar': return {bookings:publicCalendarItems_(q.month)};
     case 'publicPortfolio': return {items:portfolioItems_(true)};
+    case 'submitSurvey': return submitSurvey_(q);
     case 'adminLogin': return login_(q);
     case 'forgotPassword': return forgotPassword_(q);
     case 'resetPassword': return resetPassword_(q);
     case 'adminList': { const actor=auth_(q.token); return {bookings:all_(),adminEmails:adminEmails_(),passwordSetupRequired:adminPasswordSetupRequired_(),passwordConfiguredEmails:Object.keys(adminPasswordHashes_()),isPrimaryAdmin:actor===PRIMARY_ADMIN_EMAIL,primaryAdminEmail:PRIMARY_ADMIN_EMAIL}; }
     case 'adminAudit': return adminAudit_(q);
+    case 'adminSurveyStats': auth_(q.token); return adminSurveyStats_();
     case 'adminHeartbeat': auth_(q.token); return {ok:true};
     case 'adminLogout': return adminLogout_(q);
     case 'adminPdf': return adminPdf_(q);

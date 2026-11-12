@@ -159,9 +159,19 @@ td,th{font-size:14px}
 .service .sqm-field input{width:76px;height:auto;margin:0;padding:5px 7px;font-size:13px}
 .location-detail{margin-top:-2px}
 .admin-signature-preview{display:block;max-width:320px;max-height:120px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px;background:repeating-conic-gradient(#f7f9fc 0% 25%,#fff 0% 50%) 50% / 16px 16px;object-fit:contain}
+.survey-ratings{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:8px}
+.survey-rating{display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.survey-rating input{width:auto;margin:0}
+.survey-table-wrap{overflow:auto;margin-top:12px}
+.survey-table{width:100%;border-collapse:collapse;min-width:640px}
+.survey-table td,.survey-table th{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.survey-chart-row{display:grid;grid-template-columns:minmax(150px,1.3fr) repeat(5,minmax(42px,.5fr)) minmax(70px,.7fr);gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
+.survey-chart-row strong{text-align:center}
+.survey-share-qr{width:180px;height:180px;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#fff}
+@media(max-width:650px){.survey-ratings{grid-template-columns:repeat(2,minmax(0,1fr))}.survey-chart-row{min-width:600px}.survey-chart-wrap{overflow:auto}}
 </style>
 <header><div class="brand"><div class="brand-logos"><img class="brand-logo-ku" src="assets/ku-symbol-white-transparent.png" alt="ตรามหาวิทยาลัยเกษตรศาสตร์"><img class="brand-logo-spro" src="assets/spro-logo.png" alt="โลโก้สำนักพัฒนาการเรียนรู้ตลอดชีวิต"></div><div><h1>แบบขอรับบริการ (ส.1)</h1><div class="sub">Audio Visual Services Request Form (S1)<br>ฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ · สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.<br>โทร. 0 2942 8820 – 4 · ภายใน 61 1336-9 ต่อ 500 · <a href="http://www.llldo.ku.ac.th" style="color:inherit">http://www.llldo.ku.ac.th</a></div></div></div></header>
-<main class="wrap"><nav class="tabs"><button class="tab active" data-tab="booking">📝 ยื่นคำขอใช้บริการ</button><button class="tab" data-tab="track">🔎 ติดตามคำขอ</button><button class="tab" data-tab="calendar">📅 ปฏิทินคิวบริการ</button><button class="tab" data-tab="portfolio"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:4px" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg>คลังผลงาน</button><button class="tab" data-tab="admin">🔐 เจ้าหน้าที่</button></nav>
+<main class="wrap"><nav class="tabs"><button class="tab active" data-tab="booking">📝 ยื่นคำขอใช้บริการ</button><button class="tab" data-tab="track">🔎 ติดตามคำขอ</button><button class="tab" data-tab="calendar">📅 ปฏิทินคิวบริการ</button><button class="tab" data-tab="portfolio"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:4px" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg>คลังผลงาน</button><button class="tab" data-tab="survey">แบบประเมินความพึงพอใจ</button><button class="tab" data-tab="admin">🔐 เจ้าหน้าที่</button></nav>
 <section id="booking">
 <form id="bookingForm">
 <div class="panel"><h2 class="section-title"><span class="num">01</span> ข้อมูลทั่วไปสำหรับขอใช้บริการ</h2><div class="grid">
@@ -229,6 +239,7 @@ td,th{font-size:14px}
 <section id="calendar" class="hidden"><div class="panel"><h2 class="section-title">ปฏิทินคิวบริการ</h2><p class="muted">แสดงเฉพาะรายการที่ได้รับอนุมัติแล้ว · กรุณาติดต่อเจ้าหน้าที่เพื่อตรวจสอบคิวว่างก่อนยืนยันการจอง</p><div class="calendar-toolbar"><div class="calendar-controls"><button type="button" class="btn-light" id="calendarPrev" aria-label="เดือนก่อนหน้า">‹</button><button type="button" class="btn-light" id="calendarToday">วันนี้</button><button type="button" class="btn-light" id="calendarNext" aria-label="เดือนถัดไป">›</button><strong id="calendarMonthTitle" class="calendar-month-title" aria-live="polite"></strong></div><div class="field"><label for="calendarMonth">เลือกเดือน</label><input type="month" id="calendarMonth"></div></div><div class="calendar-stats"><div class="calendar-stat"><strong id="calendarBookingCount">0</strong>คิวที่อนุมัติ</div><div class="calendar-stat"><strong id="calendarDayCount">0</strong>วันที่มีคิว</div></div><div id="calendarMessage" class="calendar-message" role="status">กำลังโหลดข้อมูลคิว...</div><div class="calendar-scroll"><div id="calendarList" class="calendar-grid" role="grid" aria-label="ปฏิทินคิวบริการ"></div></div></div></section>
 <section id="admin" class="hidden"><div class="panel"><div id="adminLogin"><h2 class="section-title">เข้าสู่ระบบเจ้าหน้าที่</h2><p class="muted">บัญชีผู้ดูแลต้องตั้งค่าผ่านระบบหลังบ้านที่ปลอดภัยก่อนใช้งานจริง</p><div class="grid"><div class="field"><label>อีเมลผู้ดูแล</label><input type="email" id="adminEmail" placeholder="อีเมลเจ้าหน้าที่"></div><div class="field"><label>รหัสผ่าน</label><input type="password" id="adminPassword" placeholder="รหัสผ่าน"></div></div><label class="checkline" style="margin-top:12px"><input type="checkbox" id="rememberAdmin"> จดจำการเข้าสู่ระบบบนอุปกรณ์นี้</label><div class="actions"><button class="btn-primary" id="adminLoginBtn">เข้าสู่ระบบ</button><button class="btn-light" id="forgotBtn">ลืมรหัสผ่าน</button></div><p class="hint">ไม่ใส่บัญชีหรือรหัสผ่านเริ่มต้นไว้ในหน้าเว็บ เพื่อป้องกันการเข้าถึงโดยไม่ได้รับอนุญาต</p></div><div id="adminPanel" class="hidden"><div class="adminbar"><h2 class="section-title">Dashboard ผู้ดูแลระบบ</h2><button class="btn-danger" id="logoutBtn">ออกจากระบบแอดมิน</button></div><div class="kpis"><div class="kpi"><span class="muted">คำขอทั้งหมด</span><b id="kAll">0</b></div><div class="kpi"><span class="muted">รอตรวจสอบ</span><b id="kPending">0</b></div><div class="kpi"><span class="muted">อนุมัติแล้ว</span><b id="kApproved">0</b></div><div class="kpi"><span class="muted">รายได้ประมาณการ</span><b id="kRevenue">฿0</b></div></div><section class="admin-chart" aria-labelledby="usageChartTitle"><div class="admin-chart-head"><div><h3 id="usageChartTitle">สถิติการใช้งานแยกตามประเภทบริการ</h3><p class="muted">นับจำนวนคำขอที่อนุมัติ กำลังดำเนินการ หรือเสร็จสิ้น ตามปีที่ใช้บริการ</p></div><div class="field"><label for="statsYear">ปีที่ใช้บริการ</label><select id="statsYear" aria-label="เลือกปีสำหรับกราฟสถิติ"></select></div></div><div id="serviceChart" class="chart-rows" role="list" aria-label="กราฟจำนวนการใช้บริการแยกตามประเภท"></div></section><div class="actions"><button class="btn-light" id="refreshAdmin">รีเฟรชข้อมูล</button><button class="btn-light" id="exportCsv">ส่งออก CSV</button></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>รหัสคำขอ</th><th>ผู้ขอ</th><th>วันที่</th><th>เวลา</th><th>บริการ</th><th>ประมาณการ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="adminRows"><tr><td colspan="8" class="empty">ยังไม่ได้เชื่อมต่อฐานข้อมูล</td></tr></tbody></table></div><div class="notice" style="margin-top:15px">การใช้งานจริง: ตั้งค่า URL ของ Google Apps Script Web App ในไฟล์ตั้งค่าระบบ เพื่อเปิดใช้ฐานข้อมูล Google Sheets, Drive, Email และระบบอนุมัติ</div></div></div></section>
 <section id="portfolio" class="hidden"><div class="panel"><h2 class="section-title"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg>คลังผลงาน</h2><p class="muted">เลือกชมผลงานตามประเภทงาน</p><div class="field portfolio-filter"><label for="portfolioFilter">เลือกประเภทงาน</label><select id="portfolioFilter"><option value="">ผลงานทั้งหมด</option></select></div><div id="portfolioMessage" class="calendar-message" role="status">กำลังโหลดผลงาน...</div><div id="portfolioGrid" class="portfolio-grid"></div></div></section>
+<section id="survey" class="hidden"><div class="panel"><h2 class="section-title">แบบประเมินความพึงพอใจการให้บริการ</h2><p class="muted">ไม่เก็บชื่อหรืออีเมลของผู้ประเมิน · เลือกประเภทงานและให้คะแนนตามความพึงพอใจ</p><form id="satisfactionSurveyForm"><div class="field"><label for="surveyCategory">ประเภทงานที่ประเมิน <span class="required">*</span></label><select id="surveyCategory" name="category" required><option value="">เลือกประเภทงาน</option><option value="studio">ห้องสตูดิโอ (Studio LLLdo) · ชั้น 3 อาคารวิทยบริการ</option><option value="location">บันทึกภาพนอกสถานที่</option><option value="livestream">บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)</option><option value="editing">บริการตัดต่อวีดิทัศน์ (Video Editing)</option><option value="graphics">งานกราฟิกสื่อสิ่งพิมพ์</option></select></div><fieldset class="field full" style="border:0;padding:0;margin:18px 0"><legend>ระดับความพึงพอใจ <span class="required">*</span></legend><div class="survey-ratings"><label class="survey-rating"><input type="radio" name="rating" value="5" required> ดีมาก</label><label class="survey-rating"><input type="radio" name="rating" value="4"> ดี</label><label class="survey-rating"><input type="radio" name="rating" value="3"> ปานกลาง</label><label class="survey-rating"><input type="radio" name="rating" value="2"> พอใช้</label><label class="survey-rating"><input type="radio" name="rating" value="1"> ปรับปรุง</label></div></fieldset><div class="field"><label for="surveyRecommendation">ข้อแนะนำ</label><textarea id="surveyRecommendation" name="recommendation" maxlength="1000" rows="4" placeholder="ข้อแนะนำเพิ่มเติม (ไม่เกิน 1,000 ตัวอักษร)"></textarea></div><div class="actions"><button id="submitSurveyButton" class="btn-primary" type="submit">ส่งแบบประเมิน</button></div><div id="surveySubmitMessage" class="hint" role="status" aria-live="polite"></div></form></div></section>
 <div id="portfolioImageModal" class="portfolio-image-modal hidden" role="dialog" aria-modal="true" aria-label="ดูภาพผลงาน" aria-hidden="true"><div class="portfolio-image-dialog"><button type="button" id="portfolioImageClose" class="portfolio-image-close" aria-label="ปิดภาพ">×</button><img id="portfolioModalImage" alt=""></div></div>
 <footer>ฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ · สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>ระบบคำขอใช้บริการผลิตและบริการสื่อ</footer></main>
 <div id="modal" class="modal hidden"><div class="dialog"><div id="modalBody"></div><div class="actions"><button class="btn-primary" id="modalClose">ปิดหน้าต่าง</button><button class="btn-light hidden" id="downloadPdf">ดาวน์โหลดสรุปคำขอ</button></div></div></div>
@@ -292,14 +303,16 @@ function activateTab_(tabId,remember=true){
   const tab=$$('.tab').find(button=>button.dataset.tab===tabId);
   if(!tab)tabId='booking';
   $$('.tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===tabId));
-  ['booking','track','calendar','admin','portfolio'].forEach(id=>$('#'+id).classList.toggle('hidden',id!==tabId));
+  ['booking','track','calendar','admin','portfolio','survey'].forEach(id=>$('#'+id).classList.toggle('hidden',id!==tabId));
   if(remember){try{localStorage.setItem('kuMediaActiveTab',tabId)}catch(error){console.warn('ไม่สามารถจำแท็บที่เปิดอยู่ได้',error)}}
+  if(remember&&location.hash!=='#'+tabId)history.replaceState(null,'','#'+tabId);
   if(tabId==='calendar')loadCalendar();
   if(tabId==='portfolio')loadPortfolio();
 }
 $$('.tab').forEach(button=>button.onclick=()=>activateTab_(button.dataset.tab));
+window.addEventListener('hashchange',()=>{const tabId=location.hash.slice(1);if(tabId)activateTab_(tabId,false)});
 const today=new Date();$('#serviceDate').min=new Date(today.getTime()+7*864e5).toISOString().slice(0,10);$('#calendarMonth').value=monthValue_(today);
-activateTab_((()=>{try{return localStorage.getItem('kuMediaActiveTab')||'booking'}catch(error){return 'booking'}})(),false);
+activateTab_((()=>{const sharedTab=location.hash.slice(1);if(sharedTab)return sharedTab;try{return localStorage.getItem('kuMediaActiveTab')||'booking'}catch(error){return 'booking'}})(),false);
 $$('input[name=services],#hours,#photoDuration,#editMinutes,#singleDuration').forEach(x=>x.addEventListener('change',calc));
 $$('input[name=services]').forEach(x=>x.addEventListener('change',()=>{const quantity=$('[data-quantity-for="'+x.value+'"]'),area=$('[data-area-for="'+x.value+'"]'),field=quantity||area;if(field){const row=x.closest('.service'),dropdown=x.closest('.service-dropdown');row.classList.toggle('is-selected',x.checked);field.closest('.sqm-field').classList.toggle('hidden',!x.checked);if(quantity)quantity.required=x.checked;if(x.checked&&dropdown)dropdown.open=true}}));
 $$('[data-area-for],[data-quantity-for]').forEach(x=>{x.addEventListener('input',calc);x.addEventListener('click',e=>e.stopPropagation())});
@@ -312,6 +325,15 @@ function beepError(msg){sound(false);showModal('<h2>⚠️ กรุณาตร
 function makeId(){return String(Math.floor(Math.random()*900000)+100000)}
 function formObject(form){let o=Object.fromEntries(new FormData(form).entries());if(o.locationDetail)o.location+=': '+o.locationDetail.trim();delete o.locationDetail;o.services=$$('input[name=services]:checked').map(x=>x.value);o.serviceNames=o.services.map(id=>{const area=$('[data-area-for="'+id+'"]'),quantity=$('[data-quantity-for="'+id+'"]');return services[id]+(area?' ('+(Number(area.value)||1)+' ตร.ม.)':quantity?' ('+(Number(quantity.value)||1)+' ชิ้น)':'')});const printItems=o.services.filter(id=>portfolioCategoryByService[id]==='graphics').map(id=>{const area=$('[data-area-for="'+id+'"]'),quantity=$('[data-quantity-for="'+id+'"]');return services[id]+(area?' '+(Number(area.value)||1)+' ตร.ม.':quantity?' '+(Number(quantity.value)||1)+' ชิ้น':'')});o.graphicsDetails=[printItems.length?'รายการงานกราฟิก/สื่อสิ่งพิมพ์: '+printItems.join(', '):'',o.graphicsDetails?'รายละเอียดเพิ่มเติม: '+o.graphicsDetails:''].filter(Boolean).join('\\n');o.estimate=calc();o.status='Pending';o.createdAt=new Date().toISOString();return o}
 async function api(action,data={}){if(!API_URL)throw Error('ยังไม่ได้ตั้งค่า Google Apps Script API URL');let r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...data})});let j=await r.json();if(!r.ok||j.error)throw Error(j.error||'เกิดข้อผิดพลาดในการเชื่อมต่อ');return j}
+$('#satisfactionSurveyForm').onsubmit=async event=>{
+  event.preventDefault();
+  const form=event.currentTarget;if(!form.reportValidity())return;
+  const button=$('#submitSurveyButton'),message=$('#surveySubmitMessage'),payload=Object.fromEntries(new FormData(form).entries());
+  button.disabled=true;message.textContent='กำลังส่งแบบประเมิน...';
+  try{await api('submitSurvey',payload);form.reset();message.textContent='ขอบคุณสำหรับการประเมินความพึงพอใจ'}
+  catch(error){message.textContent='ส่งแบบประเมินไม่สำเร็จ: '+error.message}
+  finally{button.disabled=false}
+};
 $('#bookingForm').onsubmit=async e=>{
   e.preventDefault();
   const f=e.currentTarget;
@@ -593,6 +615,58 @@ function exportServiceStats_(){
   const blob=new Blob(['\ufeff'+rows.map(row=>row.map(value=>'"'+String(value).replaceAll('"','""')+'"').join(',')).join('\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
   link.href=url;link.download='ku-media-service-stats-'+(period==='month'?year+'-'+month:year)+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+let adminSurveyData=null;
+function renderAdminSurveyStats_(stats){
+  adminSurveyData=stats;
+  const total=$('#adminSurveyTotal'),container=$('#adminSurveyStats'),responses=$('#adminSurveyResponses');
+  total.textContent='คำตอบทั้งหมด '+Number(stats.total||0).toLocaleString('th-TH')+' รายการ';
+  container.replaceChildren();
+  const header=document.createElement('div');header.className='survey-chart-row';
+  ['ประเภทงาน','ดีมาก','ดี','ปานกลาง','พอใช้','ปรับปรุง','เฉลี่ย'].forEach((label,index)=>{const cell=document.createElement(index===0?'span':'strong');cell.textContent=label;header.appendChild(cell)});
+  container.appendChild(header);
+  (stats.categories||[]).forEach(category=>{
+    const row=document.createElement('div');row.className='survey-chart-row';
+    const label=document.createElement('span');label.textContent=category.label+' · '+category.count+' รายการ';row.appendChild(label);
+    [5,4,3,2,1].forEach(rating=>{const cell=document.createElement('strong');cell.textContent=String(category.ratingCounts&&category.ratingCounts[rating]||0);row.appendChild(cell)});
+    const average=document.createElement('strong');average.textContent=category.count?Number(category.average).toFixed(2):'—';row.appendChild(average);
+    container.appendChild(row);
+  });
+  responses.replaceChildren();
+  const list=(stats.responses||[]).slice(-100).reverse();
+  const title=document.createElement('h4');title.textContent='คำตอบล่าสุด'+(stats.responses&&stats.responses.length>100?' (แสดง 100 รายการล่าสุด)':'');responses.appendChild(title);
+  if(!list.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='ยังไม่มีผลประเมิน';responses.appendChild(empty);return}
+  const wrap=document.createElement('div'),table=document.createElement('table'),thead=document.createElement('thead'),headRow=document.createElement('tr'),tbody=document.createElement('tbody');
+  wrap.className='survey-table-wrap';table.className='survey-table';
+  ['วันและเวลา','ประเภทงาน','คะแนน','ข้อแนะนำ'].forEach(label=>{const th=document.createElement('th');th.textContent=label;headRow.appendChild(th)});
+  thead.appendChild(headRow);
+  list.forEach(response=>{
+    const row=document.createElement('tr'),date=new Date(response.submittedAt),dateText=Number.isNaN(date.getTime())?String(response.submittedAt||''):date.toLocaleString('th-TH');
+    [dateText,portfolioCategories[response.category]||response.category,(response.ratingLabel||'')+' ('+response.rating+')',response.recommendation||'—'].forEach(value=>{const cell=document.createElement('td');cell.textContent=value||'—';row.appendChild(cell)});
+    tbody.appendChild(row);
+  });
+  table.append(thead,tbody);wrap.appendChild(table);responses.appendChild(wrap);
+}
+async function loadAdminSurveyStats_(){
+  const message=$('#adminSurveyMessage');
+  if(!message)return;
+  message.textContent='กำลังโหลดผลประเมิน...';
+  try{const stats=await api('adminSurveyStats',{token:adminToken});renderAdminSurveyStats_(stats);message.textContent=''}
+  catch(error){message.textContent='โหลดผลประเมินไม่สำเร็จ: '+error.message}
+}
+function exportAdminSurveyCsv_(){
+  if(!adminSurveyData)return;
+  const escapeCell=value=>{
+    let text=String(value==null?'':value);
+    if(/^[\s\u200B\uFEFF]*[=+\-@]/.test(text))text="'"+text;
+    return '"'+text.replace(/"/g,'""')+'"';
+  };
+  const rows=[['สรุปผลประเมิน','ประเภทงาน','จำนวน','คะแนนเฉลี่ย','ดีมาก','ดี','ปานกลาง','พอใช้','ปรับปรุง']];
+  (adminSurveyData.categories||[]).forEach(category=>rows.push(['สรุป',category.label,category.count,category.count?Number(category.average).toFixed(2):'',...[5,4,3,2,1].map(rating=>category.ratingCounts&&category.ratingCounts[rating]||0)]));
+  rows.push([],['รายการประเมิน','วันและเวลา','ประเภทงาน','คะแนน','ระดับความพึงพอใจ','ข้อแนะนำ']);
+  (adminSurveyData.responses||[]).forEach(response=>rows.push(['คำตอบ',response.submittedAt,portfolioCategories[response.category]||response.category,response.rating,response.ratingLabel,response.recommendation]));
+  const blob=new Blob(['\ufeff'+rows.map(row=>row.map(escapeCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='ku-media-satisfaction-survey-'+new Date().toISOString().slice(0,10)+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 setupStatsControls_();
 function createAdminCalendarPanel_(){
   if($('#adminCalendarSection'))return;
@@ -626,7 +700,11 @@ function setupAdminDashboardLayout_(){
   workspace.className='admin-dashboard-workspace';
   overview.id='adminDashboardOverview';overview.className='admin-dashboard-view';overview.dataset.dashboardPage='true';overview.innerHTML='<h3>ภาพรวม</h3>';
   bookings.id='adminDashboardBookings';bookings.className='admin-dashboard-view';bookings.dataset.dashboardPage='true';bookings.innerHTML='<h3>จัดการคำขอใช้บริการ</h3>';
-  const pages={overview,bookings,calendar:null,email:null,signature:null,portfolio:null,share:null};
+  const surveyOverview=document.createElement('section');
+  surveyOverview.id='adminSurveyOverview';surveyOverview.className='admin-chart';
+  surveyOverview.innerHTML='<div class="admin-chart-head"><div><h3>ผลประเมินความพึงพอใจ</h3><p class="muted">สรุปจำนวนและคะแนนเฉลี่ยแยกตามประเภทงาน</p></div><button type="button" class="btn-light" id="exportSurveyCsv">ส่งออกผลประเมิน CSV</button></div><div id="adminSurveyTotal" class="muted">กำลังโหลดผลประเมิน...</div><div id="adminSurveyStats" class="survey-chart-wrap"></div><div id="adminSurveyResponses"></div><div id="adminSurveyMessage" class="hint" role="status"></div>';
+  overview.appendChild(surveyOverview);
+  const pages={overview,bookings,calendar:null,email:null,signature:null,portfolio:null,share:null,surveyShare:null};
   Array.from(panel.children).forEach(element=>{
     if(element.classList.contains('adminbar'))return;
     if(element.id==='adminCalendarSection'){pages.calendar=element;return;}
@@ -635,6 +713,7 @@ function setupAdminDashboardLayout_(){
       pages.signature=document.getElementById('adminSignatureSection');
       pages.portfolio=document.getElementById('adminPortfolioSection');
       pages.share=document.getElementById('adminShareSection');
+      pages.surveyShare=document.getElementById('adminSurveyShareSection');
       return;
     }
     if(element.classList.contains('kpis')||element.classList.contains('admin-chart')){overview.appendChild(element);return;}
@@ -650,7 +729,8 @@ function setupAdminDashboardLayout_(){
     ['จัดการอีเมล/ผู้ดูแล','adminEmailSection'],
     ['ลายเซ็นผู้อนุมัติ','adminSignatureSection'],
     ['คลังผลงาน','adminPortfolioSection'],
-    ['QR Code','adminShareSection']
+    ['QR Code','adminShareSection'],
+    ['แชร์แบบประเมิน','adminSurveyShareSection']
   ];
   items.forEach(([label,target])=>{
     const button=document.createElement('button');
@@ -674,6 +754,9 @@ function showAdminDashboardPage_(target){
 function ensureAdminTools_(){
   if($('#adminTools')||$('#adminDashboardLayout'))return;
   const sections=document.createElement('section');sections.id='adminTools';sections.innerHTML='<section class="admin-feature"><h3>QR Code สำหรับแชร์เว็บไซต์</h3><p class="muted">สแกนเพื่อเปิดเว็บไซต์นี้</p><div class="admin-share"><img id="shareQr" alt="QR Code สำหรับเปิดเว็บไซต์"><div><p id="shareUrl" class="muted"></p><button type="button" class="btn-light" id="copyShareUrl">คัดลอกลิงก์เว็บไซต์</button><p id="shareQrMessage" class="hint" role="status"></p></div></div></section><section class="admin-feature"><h3>จัดการอีเมลแจ้งเตือน</h3><p class="muted">เพิ่มหรือนำอีเมลออกจากรายชื่อผู้รับแจ้งเตือนคำขอและการเปลี่ยนสถานะ</p><form id="adminEmailForm" class="grid"><div class="field"><label for="newAdminEmail">อีเมลที่ต้องการเพิ่ม</label><input id="newAdminEmail" type="email" required placeholder="staff@ku.th"></div><div class="field" style="justify-content:end"><button class="btn-primary" type="submit">เพิ่มอีเมล</button></div></form><div id="adminEmailMessage" class="hint" role="status"></div><div id="adminEmailList" class="admin-email-list"></div></section><section class="admin-feature"><h3>จัดการคลังผลงาน</h3><p class="muted">รูปที่เผยแพร่จะแสดงให้ผู้เข้าชมเว็บไซต์ทั่วไป และเก็บในโฟลเดอร์คลังผลงานบน Google Drive</p><form id="portfolioAdminForm" class="grid"><input id="portfolioEditId" type="hidden"><div class="field"><label for="portfolioAdminCategory">ประเภทงาน</label><select id="portfolioAdminCategory" required></select></div><div class="field"><label for="portfolioAdminTitle">ชื่อผลงาน</label><input id="portfolioAdminTitle" maxlength="120" required></div><div class="field full"><label for="portfolioAdminDescription">รายละเอียด</label><textarea id="portfolioAdminDescription" maxlength="1000"></textarea></div><div class="field full"><label for="portfolioAdminImage">รูปผลงาน (JPG, PNG, WebP ไม่เกิน 5 MB)</label><input id="portfolioAdminImage" type="file" accept="image/jpeg,image/png,image/webp"><span id="portfolioImageHint" class="hint">เลือกรูปเพื่อเพิ่มผลงานใหม่ หรือเลือกไฟล์ใหม่เพื่อแทนรูปเดิม</span></div><div class="actions"><button id="portfolioSaveButton" class="btn-primary" type="submit">เพิ่มผลงาน</button><button id="portfolioCancelEdit" class="btn-light hidden" type="button">ยกเลิกการแก้ไข</button></div></form><div id="portfolioAdminMessage" class="hint" role="status"></div><div id="portfolioAdminList" class="portfolio-admin-list"></div></section>';
+  const surveyShare=document.createElement('section');surveyShare.id='adminSurveyShareSection';surveyShare.className='admin-feature';
+  surveyShare.innerHTML='<h3>ลิงก์และ QR Code แบบประเมิน</h3><p class="muted">แชร์ลิงก์นี้ให้ผู้ใช้บริการตอบแบบประเมิน โดยไม่ต้องเข้าสู่ระบบ</p><div class="admin-share"><img id="surveyShareQr" class="survey-share-qr" alt="QR Code สำหรับเปิดแบบประเมิน"><div><p id="surveyShareUrl" class="muted"></p><button type="button" class="btn-light" id="copySurveyShareUrl">คัดลอกลิงก์แบบประเมิน</button><p id="surveyShareMessage" class="hint" role="status"></p></div></div>';
+  sections.appendChild(surveyShare);
   $('#adminPanel').appendChild(sections);
   const auditPanel=document.createElement('section');auditPanel.id='adminAuditSection';auditPanel.className='admin-feature hidden';
   auditPanel.innerHTML='<h3>ประวัติและสถานะผู้ดูแล</h3><p class="muted">ตรวจสอบได้เฉพาะอีเมลหลัก · แสดงผู้ดูแลที่ใช้งานในช่วง 2.5 นาทีที่ผ่านมาและประวัติการกระทำ</p><div id="adminActiveSessions" class="hint"></div><div class="actions"><button type="button" class="btn-light" id="refreshAdminAudit">รีเฟรชประวัติ</button></div><div id="adminAuditMessage" class="hint" role="status"></div><div id="adminAuditList" class="admin-email-list"></div>';
@@ -697,6 +780,11 @@ function ensureAdminTools_(){
   $('#shareUrl').textContent=qrUrl;qr.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(qrUrl);
   qr.onerror=()=>{qrMessage.textContent='สร้าง QR Code ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'};
   $('#copyShareUrl').onclick=async()=>{try{await navigator.clipboard.writeText(qrUrl);qrMessage.textContent='คัดลอกลิงก์แล้ว'}catch(error){qrMessage.textContent='คัดลอกอัตโนมัติไม่ได้ กรุณาคัดลอกลิงก์ที่แสดงด้านบน'}};
+  const surveyUrl=qrUrl+'#survey',surveyQr=$('#surveyShareQr');
+  $('#surveyShareUrl').textContent=surveyUrl;surveyQr.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(surveyUrl);
+  surveyQr.onerror=()=>{$('#surveyShareMessage').textContent='สร้าง QR Code ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'};
+  $('#copySurveyShareUrl').onclick=async()=>{try{await navigator.clipboard.writeText(surveyUrl);$('#surveyShareMessage').textContent='คัดลอกลิงก์แล้ว'}catch(error){$('#surveyShareMessage').textContent='คัดลอกอัตโนมัติไม่ได้ กรุณาคัดลอกลิงก์ที่แสดงด้านบน'}};
+  $('#exportSurveyCsv').onclick=exportAdminSurveyCsv_;
   const categorySelect=$('#portfolioAdminCategory');
   Object.entries(portfolioCategories).forEach(([id,label])=>{const option=document.createElement('option');option.value=id;option.textContent=label;categorySelect.appendChild(option)});
   $('#adminEmailForm').onsubmit=async event=>{
@@ -917,7 +1005,7 @@ async function loadPortfolio(){
 async function loadAdmin(){
   try{
     const r=await api('adminList',{token:adminToken});adminData=r.bookings||[];adminEmails=r.adminEmails||[];adminPasswordSetupRequired=r.passwordSetupRequired||[];adminPasswordConfiguredEmails=r.passwordConfiguredEmails||[];isPrimaryAdmin=Boolean(r.isPrimaryAdmin);
-    ensureAdminTools_();renderAdminEmails();await loadAdminSignature_();
+    ensureAdminTools_();renderAdminEmails();await loadAdminSurveyStats_();await loadAdminSignature_();
     if(isPrimaryAdmin)await loadAdminAudit_();
     $('#kAll').textContent=adminData.length;
     $('#kPending').textContent=adminData.filter(x=>x.status==='Pending').length;
