@@ -264,14 +264,19 @@ function login_(q){
   const email=String(q.email||'').trim().toLowerCase();
   const allowed=adminEmails_();
   const password=String(q.password||'');
-  const hashes=adminPasswordHashes_();
-  const saved=String(hashes[email]||'').trim().toLowerCase();
+  const hashes=adminPasswordHashes_(),legacyHash=String(PROP.getProperty('ADMIN_PASSWORD_HASH')||'').trim().toLowerCase();
+  const usingLegacyPrimaryPassword=email===PRIMARY_ADMIN_EMAIL&&!hashes[email]&&!!legacyHash;
+  const saved=String(hashes[email]||(usingLegacyPrimaryPassword?legacyHash:'')).trim().toLowerCase();
   // Accept the common terminal newline variants used when generating a SHA-256 hash.
   const candidates=[sha256_(password),sha256_(password+'\n'),sha256_(password+'\r\n')].map(x=>x.toLowerCase());
   if(!allowed.includes(email)||!candidates.includes(saved))throw Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+  if(usingLegacyPrimaryPassword){
+    hashes[email]=legacyHash;
+    PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
+  }
   const token=Utilities.getUuid()+Utilities.getUuid();CacheService.getScriptCache().put('admin:'+token,JSON.stringify({email,version:adminSessionVersion_(email)}),21600);
-  touchAdminSession_(email,token);recordAdminAudit_(email,'เข้าสู่ระบบ','', '');
-  return {token,expiresIn:21600};
+  touchAdminSession_(email,token);recordAdminAudit_(email,usingLegacyPrimaryPassword?'เข้าสู่ระบบด้วยรหัสผ่านเดิม':'เข้าสู่ระบบ','',usingLegacyPrimaryPassword?'กรุณาตั้งรหัสผ่านส่วนตัวผ่าน OTP เพื่อยกเลิกรหัสผ่านเดิม':'');
+  return {token,expiresIn:21600,passwordMigrationRequired:usingLegacyPrimaryPassword};
 }
 
 
