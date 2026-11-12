@@ -3,12 +3,17 @@
  * First run: set Script Properties ADMIN_EMAILS and ADMIN_PASSWORD_HASH.
  * Then run setup() once. It creates a new Google Spreadsheet and Drive folder
  * automatically and stores their IDs in Script Properties.
+ * Each administrator must set a unique password through the OTP reset flow.
  *
  * ADMIN_PASSWORD_HASH = lowercase SHA-256 hex digest of a unique password.
  * Example (Mac/Linux): printf %s 'YOUR-UNIQUE-PASSWORD' | shasum -a 256
  */
 const HEADERS = ['id','createdAt','name','department','phone','email','date','event','project','location','start','end','requirements','services','serviceNames','estimate','payment','paymentDetail','taxInvoice','taxName','taxId','taxAddress','status','adminNote','driveFolderUrl','receiptUrl','graphicsDetails'];
 const STATUSES = ['Pending','Approved / Quoted','Rejected','Completed'];
+const PRIMARY_ADMIN_EMAIL = 'media.llldo@ku.th';
+const ADMIN_AUDIT_HEADERS = ['timestamp','actor','action','target','details'];
+const ADMIN_ACTIVITY_HEADERS = ['sessionHash','email','startedAt','lastSeenAt','state'];
+const GRAPHICS_ONLY_ADMIN_EMAILS = ['tassawan.d@ku.th'];
 const SERVICE_LABELS = {studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์',poster_a0_lam:'พิมพ์โปสเตอร์ A0 เคลือบสติกเกอร์',poster_a0_plain:'พิมพ์โปสเตอร์ A0 ไม่เคลือบสติกเกอร์',poster_a1_lam:'พิมพ์โปสเตอร์ A1 เคลือบสติกเกอร์',poster_a1_plain:'พิมพ์โปสเตอร์ A1 ไม่เคลือบสติกเกอร์',poster_a2_lam:'พิมพ์โปสเตอร์ A2 เคลือบสติกเกอร์',poster_a2_plain:'พิมพ์โปสเตอร์ A2 ไม่เคลือบสติกเกอร์',vinyl_plain:'พิมพ์ป้ายไวนิล ไม่ซีลขอบ',vinyl_eyelet:'พิมพ์ป้ายไวนิล ซีลขอบและตอกตาไก่',sticker_basic:'สติกเกอร์ผิวด้าน-มัน',sticker_matte:'สติกเกอร์เคลือบด้าน',foam_3:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 3 มม.',foam_4:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 4 มม.',foam_5:'ติดสติกเกอร์ลงโฟมบอร์ด 5 มม.',plaswood_3:'ติดสติกเกอร์ลงพลาสวูด 3 มม.',plaswood_4:'ติดสติกเกอร์ลงพลาสวูด 4 มม.'};
 const PORTFOLIO_CATEGORIES = {studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)',graphics:'งานกราฟิกสื่อสิ่งพิมพ์'};
 const PORTFOLIO_CATEGORY_BY_SERVICE = {studio_pro:'studio',studio_basic:'studio',photo:'studio',audio:'studio',single_cam:'location',ob2:'location',ob3:'location',live:'livestream',editing:'editing',poster_a0_lam:'graphics',poster_a0_plain:'graphics',poster_a1_lam:'graphics',poster_a1_plain:'graphics',poster_a2_lam:'graphics',poster_a2_plain:'graphics',vinyl_plain:'graphics',vinyl_eyelet:'graphics',sticker_basic:'graphics',sticker_matte:'graphics',foam_3:'graphics',foam_4:'graphics',foam_5:'graphics',plaswood_3:'graphics',plaswood_4:'graphics'};
@@ -19,8 +24,8 @@ const PROP = PropertiesService.getScriptProperties();
 
 function setup() {
   const admins = PROP.getProperty('ADMIN_EMAILS');
-  const hash = PROP.getProperty('ADMIN_PASSWORD_HASH');
-  if (!admins || !hash) throw new Error('ตั้งค่า Script Properties: ADMIN_EMAILS และ ADMIN_PASSWORD_HASH ก่อนเรียก setup()');
+  const passwordConfigured=!!PROP.getProperty('ADMIN_PASSWORD_HASH')||Object.keys(adminPasswordHashes_()).length>0;
+  if (!admins || !passwordConfigured) throw new Error('ตั้งค่า Script Properties: ADMIN_EMAILS และรหัสผ่านผู้ดูแลก่อนเรียก setup()');
   let ssId = PROP.getProperty('SHEET_ID');
   if (!ssId) {
     const ss = SpreadsheetApp.create('KU Media Booking — ฐานข้อมูลคำขอใช้บริการ');
@@ -47,6 +52,8 @@ function setup() {
     }
   }
   if (!ssObj.getSheetByName('MailQueue')) { const q=ssObj.insertSheet('MailQueue'); q.appendRow(['queuedAt','bookingId','recipient','kind','state','lastError']); q.setFrozenRows(1); q.getRange(1,1,1,6).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
+  if (!ssObj.getSheetByName('AdminAudit')) { const a=ssObj.insertSheet('AdminAudit'); a.appendRow(ADMIN_AUDIT_HEADERS); a.setFrozenRows(1); a.getRange(1,1,1,ADMIN_AUDIT_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
+  if (!ssObj.getSheetByName('AdminActivity')) { const a=ssObj.insertSheet('AdminActivity'); a.appendRow(ADMIN_ACTIVITY_HEADERS); a.setFrozenRows(1); a.getRange(1,1,1,ADMIN_ACTIVITY_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   if (!ssObj.getSheetByName('Portfolio')) { const p=ssObj.insertSheet('Portfolio'); p.appendRow(PORTFOLIO_HEADERS); p.setFrozenRows(1); p.getRange(1,1,1,PORTFOLIO_HEADERS.length).setFontWeight('bold').setBackground('#174b78').setFontColor('#ffffff'); }
   calendarEventsSheet_(true);
   let galleryFolderId=PROP.getProperty('GALLERY_FOLDER_ID');
@@ -112,7 +119,10 @@ function route_(q){
     case 'adminLogin': return login_(q);
     case 'forgotPassword': return forgotPassword_(q);
     case 'resetPassword': return resetPassword_(q);
-    case 'adminList': auth_(q.token); return {bookings:all_(),adminEmails:adminEmails_(),passwordSetupRequired:adminPasswordSetupRequired_(),passwordConfiguredEmails:Object.keys(adminPasswordHashes_())};
+    case 'adminList': { const actor=auth_(q.token); return {bookings:all_(),adminEmails:adminEmails_(),passwordSetupRequired:adminPasswordSetupRequired_(),passwordConfiguredEmails:Object.keys(adminPasswordHashes_()),isPrimaryAdmin:actor===PRIMARY_ADMIN_EMAIL,primaryAdminEmail:PRIMARY_ADMIN_EMAIL}; }
+    case 'adminAudit': return adminAudit_(q);
+    case 'adminHeartbeat': auth_(q.token); return {ok:true};
+    case 'adminLogout': return adminLogout_(q);
     case 'adminPdf': return adminPdf_(q);
     case 'adminSignature': return getAdminSignature_(q);
     case 'saveAdminSignature': return saveAdminSignature_(q);
@@ -165,15 +175,17 @@ function saveAdminSignature_(q){
     try{DriveApp.getFileById(oldFileId).setTrashed(true)}
     catch(error){warning='เปลี่ยนลายเซ็นแล้ว แต่ไม่สามารถนำไฟล์ลายเซ็นเดิมไปถังขยะได้: '+String(error.message||error)}
   }
+  recordAdminAudit_(actor,'เปลี่ยนลายเซ็นผู้อนุมัติ',file.getId(),'');
   return {ok:true,warning};
 }
 function deleteAdminSignature_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);
   const fileId=PROP.getProperty('APPROVER_SIGNATURE_FILE_ID');
   if(!fileId)return {ok:true};
   PROP.deleteProperty('APPROVER_SIGNATURE_FILE_ID');
   PROP.deleteProperty('APPROVER_SIGNATURE_AUTHORIZED_AT');
   PROP.deleteProperty('APPROVER_SIGNATURE_AUTHORIZED_BY');
+  recordAdminAudit_(actor,'ลบลายเซ็นผู้อนุมัติ',fileId,'');
   try{DriveApp.getFileById(fileId).setTrashed(true)}
   catch(error){return {ok:true,warning:'ลบลายเซ็นออกจากระบบแล้ว แต่ไม่สามารถนำไฟล์เดิมไปถังขยะได้: '+String(error.message||error)}}
   return {ok:true};
@@ -233,28 +245,32 @@ function createCalendarEvent_(q){
   if(!title||title.length>120||notes.length>500)throw new Error('ชื่อรายการต้องมี 1–120 ตัวอักษร และหมายเหตุไม่เกิน 500 ตัวอักษร');
   const sheet=calendarEventsSheet_(true),id='EV-'+Utilities.getUuid();
   sheet.appendRow([id,date,start,end,title,notes,actor,new Date()].map(sheetSafeValue_));
+  recordAdminAudit_(actor,'เพิ่มรายการกันคิว',id,title+' · '+date+' '+start+'-'+end);
   return {ok:true,event:{id,date,start,end,title,notes,eventType:'block'}};
 }
 function deleteCalendarEvent_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);
   const id=String(q.id||''),sheet=calendarEventsSheet_(false);
   if(!sheet||sheet.getLastRow()<2)throw new Error('ไม่พบรายการกันคิว');
   const row=sheet.getRange(2,1,sheet.getLastRow()-1,1).getValues().findIndex(value=>String(value[0])===id);
   if(row<0)throw new Error('ไม่พบรายการกันคิว');
+  const removed=sheet.getRange(row+2,1,1,8).getValues()[0];
   sheet.deleteRow(row+2);
+  recordAdminAudit_(actor,'ลบรายการกันคิว',id,String(removed[4]||''));
   return {ok:true};
 }
 
 function login_(q){
   const email=String(q.email||'').trim().toLowerCase();
-  const allowed=(PROP.getProperty('ADMIN_EMAILS')||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+  const allowed=adminEmails_();
   const password=String(q.password||'');
-  const hashes=adminPasswordHashes_(),requiresSetup=adminPasswordSetupRequired_().includes(email);
-  const saved=String(hashes[email]||(requiresSetup?'':PROP.getProperty('ADMIN_PASSWORD_HASH'))||'').trim().toLowerCase();
+  const hashes=adminPasswordHashes_();
+  const saved=String(hashes[email]||'').trim().toLowerCase();
   // Accept the common terminal newline variants used when generating a SHA-256 hash.
   const candidates=[sha256_(password),sha256_(password+'\n'),sha256_(password+'\r\n')].map(x=>x.toLowerCase());
   if(!allowed.includes(email)||!candidates.includes(saved))throw Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
   const token=Utilities.getUuid()+Utilities.getUuid();CacheService.getScriptCache().put('admin:'+token,JSON.stringify({email,version:adminSessionVersion_(email)}),21600);
+  touchAdminSession_(email,token);recordAdminAudit_(email,'เข้าสู่ระบบ','', '');
   return {token,expiresIn:21600};
 }
 
@@ -267,9 +283,11 @@ function resetAdminPassword(){
   if(response.getSelectedButton()!==ui.Button.OK)return;
   const password=response.getResponseText();
   if(password.length<6)throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
-  PROP.setProperty('ADMIN_PASSWORD_HASH',sha256_(password));
-  adminEmails_().forEach(invalidateAdminSessions_);
-  ui.alert('บันทึก hash รหัสผ่านใหม่แล้ว กรุณาทดลองเข้าสู่ระบบ');
+  const hashes=adminPasswordHashes_();hashes[PRIMARY_ADMIN_EMAIL]=sha256_(password);
+  PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
+  PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',adminPasswordSetupRequired_().filter(email=>email!==PRIMARY_ADMIN_EMAIL).join(','));
+  invalidateAdminSessions_(PRIMARY_ADMIN_EMAIL);
+  ui.alert('ตั้งรหัสผ่านส่วนตัวของอีเมลหลักแล้ว กรุณาทดลองเข้าสู่ระบบ');
 }
 
 
@@ -278,7 +296,7 @@ function resetAdminPassword(){
 function forgotPassword_(q){
   const email=String(q.email||'').trim().toLowerCase();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw new Error('กรุณากรอกอีเมลให้ถูกต้อง');
-  const allowed=(PROP.getProperty('ADMIN_EMAILS')||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+  const allowed=adminEmails_();
   // Do not reveal whether an address is registered.
   if(!allowed.includes(email))return {ok:true};
   const cache=CacheService.getScriptCache();
@@ -304,7 +322,7 @@ function resetPassword_(q){
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw new Error('อีเมลไม่ถูกต้อง');
   if(!/^\d{6}$/.test(otp))throw new Error('กรุณากรอกรหัส OTP 6 หลัก');
   if(password.length<6)throw new Error('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
-  const allowed=(PROP.getProperty('ADMIN_EMAILS')||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+  const allowed=adminEmails_();
   if(!allowed.includes(email))throw new Error('ไม่สามารถยืนยันคำขอได้ กรุณาขอรหัส OTP ใหม่');
   const cache=CacheService.getScriptCache();
   const key=sha256_('ku-media-reset:'+email);
@@ -323,6 +341,7 @@ function resetPassword_(q){
   invalidateAdminSessions_(email);
   if(adminEmails_().every(item=>hashes[item]))PROP.deleteProperty('ADMIN_PASSWORD_HASH');
   cache.remove(otpKey);cache.remove('reset-attempts:'+key);cache.remove('reset-rate:'+key);
+  recordAdminAudit_(email,'เปลี่ยนรหัสผ่าน','', 'ยืนยันผ่าน OTP');
   return {ok:true};
 }
 
@@ -341,12 +360,65 @@ function auth_(token){
   try{session=JSON.parse(cached)}catch(_){throw Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่')}
   const email=String(session.email||'').toLowerCase(),allowed=adminEmails_();
   if(!email||!allowed.includes(email)||session.version!==adminSessionVersion_(email))throw Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  if(!adminPasswordHashes_()[email])throw Error('บัญชีนี้ต้องตั้งรหัสผ่านส่วนตัวผ่าน OTP ก่อนใช้งาน');
+  touchAdminSession_(email,token);
   return email;
+}
+function adminAuditSheet_(){
+  const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
+  let sheet=ss.getSheetByName('AdminAudit');
+  if(!sheet){sheet=ss.insertSheet('AdminAudit');sheet.appendRow(ADMIN_AUDIT_HEADERS);sheet.setFrozenRows(1)}
+  return sheet;
+}
+function adminActivitySheet_(){
+  const ss=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID'));
+  let sheet=ss.getSheetByName('AdminActivity');
+  if(!sheet){sheet=ss.insertSheet('AdminActivity');sheet.appendRow(ADMIN_ACTIVITY_HEADERS);sheet.setFrozenRows(1)}
+  return sheet;
+}
+function recordAdminAudit_(actor,action,target,details){
+  adminAuditSheet_().appendRow([new Date(),actor,action,target,details||'']);
+}
+function touchAdminSession_(email,token){
+  const sheet=adminActivitySheet_(),hash=sha256_(token),lastRow=sheet.getLastRow();
+  const row=lastRow>1?sheet.getRange(2,1,lastRow-1,1).getValues().findIndex(value=>String(value[0])===hash):-1;
+  const now=new Date();
+  if(row<0)sheet.appendRow([hash,email,now,now,'ACTIVE']);
+  else sheet.getRange(row+2,2,1,4).setValues([[email,sheet.getRange(row+2,3).getValue(),now,'ACTIVE']]);
+}
+function revokeAdminActivity_(email){
+  const sheet=adminActivitySheet_(),lastRow=sheet.getLastRow();
+  if(lastRow<2)return;
+  const rows=sheet.getRange(2,1,lastRow-1,5).getValues();
+  rows.forEach((row,index)=>{if(String(row[1]||'').toLowerCase()===email)sheet.getRange(index+2,5).setValue('REVOKED')});
+}
+function adminAudit_(q){
+  const actor=auth_(q.token);requirePrimaryAdmin_(actor);
+  const audit=adminAuditSheet_(),rows=audit.getDataRange().getValues().slice(1).filter(row=>row[0]);
+  const events=rows.slice(-500).reverse().map(row=>({timestamp:row[0],actor:String(row[1]||''),action:String(row[2]||''),target:String(row[3]||''),details:String(row[4]||'')}));
+  const activity=adminActivitySheet_(),now=Date.now(),activeSessions=activity.getDataRange().getValues().slice(1)
+    .filter(row=>row[0]&&row[4]==='ACTIVE'&&now-new Date(row[3]).getTime()<=150000)
+    .map(row=>({email:String(row[1]||''),startedAt:row[2],lastSeenAt:row[3]}));
+  return {events,activeSessions};
+}
+function requirePrimaryAdmin_(actor){
+  if(actor!==PRIMARY_ADMIN_EMAIL)throw new Error('เฉพาะอีเมลหลัก '+PRIMARY_ADMIN_EMAIL+' เท่านั้นที่ดำเนินการนี้ได้');
+}
+function adminLogout_(q){
+  const actor=auth_(q.token),sheet=adminActivitySheet_(),hash=sha256_(q.token),lastRow=sheet.getLastRow();
+  if(lastRow>1){
+    const row=sheet.getRange(2,1,lastRow-1,1).getValues().findIndex(value=>String(value[0])===hash);
+    if(row>=0)sheet.getRange(row+2,5).setValue('LOGGED_OUT');
+  }
+  recordAdminAudit_(actor,'ออกจากระบบ','', '');
+  CacheService.getScriptCache().remove('admin:'+q.token);
+  return {ok:true};
 }
 function updateStatus_(q){
   const actor=auth_(q.token);if(!STATUSES.includes(q.status))throw Error('สถานะไม่ถูกต้อง');
   const sh=sheet_(),v=sh.getDataRange().getValues(),i=v.findIndex((r,n)=>n>0&&String(r[0])===String(q.id));if(i<1)throw Error('ไม่พบคำขอ');
   sh.getRange(i+1,23).setValue(q.status);sh.getRange(i+1,24).setValue(q.adminNote||'');
+  recordAdminAudit_(actor,'เปลี่ยนสถานะคำขอ',String(q.id),String(v[i][22]||'')+' → '+q.status);
   const b=all_().find(x=>x.id===q.id);if(!b)throw Error('ไม่พบคำขอ');
   let receiptUrl='';
   if(q.status==='Completed'){
@@ -400,7 +472,11 @@ function sendBookingEmail_(b){
   MailApp.sendEmail({to:b.email,subject:'ยืนยันรับคำขอ '+b.id+' | บริการผลิตและบริการสื่อ มก.',body:'ระบบได้รับคำขอ '+b.id+' แล้ว สถานะรอเจ้าหน้าที่ตรวจสอบ',htmlBody:emailHtml_(b,'',false),name:'KU Media Service'});
 }
 function notifyAdminsHtml_(b){
-  adminEmails_().forEach(to=>MailApp.sendEmail({to,subject:'🔔 คำขอใช้บริการใหม่ '+b.id,body:'มีคำขอใหม่ '+b.id+' จาก '+b.name,htmlBody:emailHtml_(b,'',true),name:'KU Media Service'}));
+  adminEmails_().filter(to=>shouldNotifyAdmin_(to,b)).forEach(to=>MailApp.sendEmail({to,subject:'🔔 คำขอใช้บริการใหม่ '+b.id,body:'มีคำขอใหม่ '+b.id+' จาก '+b.name,htmlBody:emailHtml_(b,'',true),name:'KU Media Service'}));
+}
+function shouldNotifyAdmin_(email,b){
+  if(!GRAPHICS_ONLY_ADMIN_EMAILS.includes(String(email||'').trim().toLowerCase()))return true;
+  return (b.services||[]).some(serviceId=>PORTFOLIO_CATEGORY_BY_SERVICE[serviceId]==='graphics');
 }
 function makePdf_(b,title){
   const folder=DriveApp.getFolderById(PROP.getProperty('DRIVE_FOLDER_ID'));
@@ -420,8 +496,11 @@ function adminPdf_(q){
   return {filename,mimeType:'application/pdf',data:Utilities.base64Encode(pdf.getBytes())};
 }
 function escapeHtml_(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function notifyAdmins_(subject,body){(PROP.getProperty('ADMIN_EMAILS')||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(to=>MailApp.sendEmail(to,subject,body))}
-function adminEmails_(){return (PROP.getProperty('ADMIN_EMAILS')||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)}
+function notifyAdmins_(subject,body){adminEmails_().forEach(to=>MailApp.sendEmail(to,subject,body))}
+function adminEmails_(){
+  const configured=(PROP.getProperty('ADMIN_EMAILS')||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  return [PRIMARY_ADMIN_EMAIL,...configured.filter(email=>email!==PRIMARY_ADMIN_EMAIL)];
+}
 function adminPasswordHashes_(){
   const value=PROP.getProperty('ADMIN_PASSWORD_HASHES');
   if(!value)return {};
@@ -431,20 +510,23 @@ function adminPasswordHashes_(){
 }
 function adminPasswordSetupRequired_(){return (PROP.getProperty('ADMIN_PASSWORD_SETUP_REQUIRED')||'').split(',').map(email=>email.trim().toLowerCase()).filter(Boolean)}
 function addAdminEmail_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);requirePrimaryAdmin_(actor);
   const email=String(q.email||'').trim().toLowerCase();
   if(!/^[^@\s]+@ku\.th$/.test(email))throw Error('เพิ่มผู้ดูแลได้เฉพาะอีเมล @ku.th');
   const emails=adminEmails_();
-  if(!emails.includes(email)){
+  const added=!emails.includes(email);
+  if(added){
     emails.push(email);
     PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',[...new Set(adminPasswordSetupRequired_().concat(email))].join(','));
   }
   PROP.setProperty('ADMIN_EMAILS',emails.join(','));
+  if(added)recordAdminAudit_(actor,'เพิ่มอีเมลผู้ดูแล',email,'');
   return {ok:true,emails};
 }
 function removeAdminEmail_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);requirePrimaryAdmin_(actor);
   const email=String(q.email||'').trim().toLowerCase(),emails=adminEmails_();
+  if(email===PRIMARY_ADMIN_EMAIL)throw Error('ไม่สามารถนำอีเมลหลักออกจากระบบได้');
   if(!emails.includes(email))throw Error('ไม่พบอีเมลนี้ในรายชื่อผู้รับแจ้งเตือน');
   if(emails.length<=1)throw Error('ต้องมีอีเมลผู้ดูแลอย่างน้อย 1 รายการ');
   const remaining=emails.filter(item=>item!==email);
@@ -452,6 +534,8 @@ function removeAdminEmail_(q){
   PROP.setProperty('ADMIN_EMAILS',remaining.join(','));
   const hashes=adminPasswordHashes_();delete hashes[email];PROP.setProperty('ADMIN_PASSWORD_HASHES',JSON.stringify(hashes));
   PROP.setProperty('ADMIN_PASSWORD_SETUP_REQUIRED',adminPasswordSetupRequired_().filter(item=>item!==email).join(','));
+  revokeAdminActivity_(email);
+  recordAdminAudit_(actor,'นำอีเมลผู้ดูแลออก',email,'');
   return {ok:true,emails:remaining};
 }
 function portfolioSheet_(){
@@ -485,7 +569,7 @@ function portfolioItems_(publicOnly){
   })).filter(item=>item.fileId).sort((a,b)=>a.position-b.position);
 }
 function savePortfolioItem_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);
   const id=String(q.id||''),category=String(q.category||''),title=String(q.title||'').trim(),description=String(q.description||'').trim();
   if(!PORTFOLIO_CATEGORIES[category])throw new Error('กรุณาเลือกประเภทงานที่ถูกต้อง');
   if(!title)throw new Error('กรุณาระบุชื่อผลงาน');
@@ -518,10 +602,11 @@ function savePortfolioItem_(q){
   else sheet.appendRow(row);
   sheet.getRange(existing?rowIndex+1:sheet.getLastRow(),orderColumn).setValue(position);
   if(existing&&existing[5]&&existing[5]!==fileId)DriveApp.getFileById(String(existing[5])).setTrashed(true);
+  recordAdminAudit_(actor,existing?'แก้ไขผลงาน':'เพิ่มผลงาน',String(row[0]),title);
   return {ok:true,item:{id:row[0],createdAt:row[1],category,title,description,fileId,imageUrl:portfolioImageUrl_(fileId),active:true,position}};
 }
 function reorderPortfolioItems_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);
   const ids=q.ids;
   if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string'||!id)||new Set(ids).size!==ids.length)throw new Error('ลำดับผลงานไม่ถูกต้อง');
   const lock=LockService.getScriptLock();lock.waitLock(12000);
@@ -531,21 +616,23 @@ function reorderPortfolioItems_(q){
     const orderColumn=portfolioOrderColumn_(sheet),positions=new Map(ids.map((id,index)=>[id,index]));
     const ordered=values.slice(1).filter(row=>row[0]).map(row=>[positions.get(String(row[0]))]);
     if(ordered.length)sheet.getRange(2,orderColumn,ordered.length,1).setValues(ordered);
+    recordAdminAudit_(actor,'เปลี่ยนลำดับผลงาน','',ids.length+' รายการ');
     return {ok:true};
   }finally{lock.releaseLock()}
 }
 function deletePortfolioItem_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);
   const id=String(q.id||''),sheet=portfolioSheet_(),values=sheet.getDataRange().getValues();
   const rowIndex=values.findIndex((row,index)=>index>0&&String(row[0])===id);
   if(rowIndex<1)throw new Error('ไม่พบผลงานที่ต้องการลบ');
   const fileId=String(values[rowIndex][5]||'');
   if(fileId)DriveApp.getFileById(fileId).setTrashed(true);
   sheet.deleteRow(rowIndex+1);
+  recordAdminAudit_(actor,'ลบผลงาน',id,String(values[rowIndex][3]||''));
   return {ok:true};
 }
 function removeBooking_(q){
-  auth_(q.token);
+  const actor=auth_(q.token);
   const id=String(q.id||''),sh=sheet_(),values=sh.getDataRange().getValues(),index=values.findIndex((row,n)=>n>0&&String(row[0])===id);
   if(index<1)throw Error('ไม่พบคำขอ');
   const queue=SpreadsheetApp.openById(PROP.getProperty('SHEET_ID')).getSheetByName('MailQueue');
@@ -554,6 +641,7 @@ function removeBooking_(q){
     for(let row=queued.length-1;row>0;row--)if(String(queued[row][1])===id&&queued[row][4]==='QUEUED')queue.deleteRow(row+1);
   }
   sh.deleteRow(index+1);
+  recordAdminAudit_(actor,'ลบคำขอใช้บริการ',id,'');
   return {ok:true};
 }
 function sha256_(s){return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,s,Utilities.Charset.UTF_8).map(b=>(b+256).toString(16).slice(-2)).join('')}

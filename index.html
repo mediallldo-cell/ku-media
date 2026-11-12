@@ -224,7 +224,7 @@ td,th{font-size:14px}
 <footer>ฝ่ายพัฒนาสื่อส่งเสริมการเรียนรู้ · สำนักพัฒนาการเรียนรู้ตลอดชีวิต · มหาวิทยาลัยเกษตรศาสตร์<br>ระบบคำขอใช้บริการผลิตและบริการสื่อ</footer></main>
 <div id="modal" class="modal hidden"><div class="dialog"><div id="modalBody"></div><div class="actions"><button class="btn-primary" id="modalClose">ปิดหน้าต่าง</button><button class="btn-light hidden" id="downloadPdf">ดาวน์โหลดสรุปคำขอ</button></div></div></div>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbx07u5bfdZDVbmAs3HjGCvbbWyruOPVoGR1fd-FT9UAZX1uU1J_yg6QjxdxSCYDPiSrVQ/exec';let currentRequest=null,adminData=[],adminEmails=[],adminPasswordSetupRequired=[],adminPasswordConfiguredEmails=[],portfolioData=[],adminToken=null,calendarRequest=0,adminCalendarRequest=0,portfolioImageTrigger=null,portfolioOrderSaving=false,approverSignatureDataUrl=null;
+const API_URL='https://script.google.com/macros/s/AKfycbx07u5bfdZDVbmAs3HjGCvbbWyruOPVoGR1fd-FT9UAZX1uU1J_yg6QjxdxSCYDPiSrVQ/exec';let currentRequest=null,adminData=[],adminEmails=[],adminPasswordSetupRequired=[],adminPasswordConfiguredEmails=[],portfolioData=[],adminToken=null,calendarRequest=0,adminCalendarRequest=0,portfolioImageTrigger=null,portfolioOrderSaving=false,approverSignatureDataUrl=null,isPrimaryAdmin=false,adminHeartbeatTimer=null;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const services={studio_pro:'Studio ETO Full HD',studio_basic:'Studio ETO',photo:'ห้องถ่ายภาพ STUDIO',audio:'บันทึกเสียงคำบรรยาย',single_cam:'ถ่ายทำนอกสถานที่ กล้องเดี่ยว',ob2:'OB 2 กล้อง',ob3:'OB 3 กล้อง',live:'ถ่ายทอดสดออนไลน์',editing:'ตัดต่อวีดิทัศน์',poster_a0_lam:'พิมพ์โปสเตอร์ A0 เคลือบสติกเกอร์',poster_a0_plain:'พิมพ์โปสเตอร์ A0 ไม่เคลือบสติกเกอร์',poster_a1_lam:'พิมพ์โปสเตอร์ A1 เคลือบสติกเกอร์',poster_a1_plain:'พิมพ์โปสเตอร์ A1 ไม่เคลือบสติกเกอร์',poster_a2_lam:'พิมพ์โปสเตอร์ A2 เคลือบสติกเกอร์',poster_a2_plain:'พิมพ์โปสเตอร์ A2 ไม่เคลือบสติกเกอร์',vinyl_plain:'พิมพ์ป้ายไวนิล ไม่ซีลขอบ',vinyl_eyelet:'พิมพ์ป้ายไวนิล ซีลขอบและตอกตาไก่',sticker_basic:'สติกเกอร์ผิวด้าน-มัน',sticker_matte:'สติกเกอร์เคลือบด้าน',foam_3:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 3 มม.',foam_4:'ติดสติกเกอร์ลงฟิวเจอร์บอร์ด 4 มม.',foam_5:'ติดสติกเกอร์ลงโฟมบอร์ด 5 มม.',plaswood_3:'ติดสติกเกอร์ลงพลาสวูด 3 มม.',plaswood_4:'ติดสติกเกอร์ลงพลาสวูด 4 มม.'};
 const portfolioCategories={studio:'ห้องสตูดิโอ (Studio ETO) · ชั้น 3 อาคารวิทยบริการ',location:'บันทึกภาพนอกสถานที่',livestream:'บริการถ่ายทอดสดออนไลน์ (Facebook Live / YouTube Live)',editing:'บริการตัดต่อวีดิทัศน์ (Video Editing)',graphics:'งานกราฟิกสื่อสิ่งพิมพ์'};
@@ -520,7 +520,7 @@ $('#calendarMonth').onchange=loadCalendar;
 $('#calendarPrev').onclick=()=>shiftCalendarMonth_(-1);
 $('#calendarNext').onclick=()=>shiftCalendarMonth_(1);
 $('#calendarToday').onclick=()=>{$('#calendarMonth').value=monthValue_(new Date());loadCalendar()};
-$('#adminLoginBtn').onclick=async()=>{try{let r=await api('adminLogin',{email:$('#adminEmail').value,password:$('#adminPassword').value,remember:$('#rememberAdmin').checked});adminToken=r.token;$('#adminLogin').classList.add('hidden');$('#adminPanel').classList.remove('hidden');await loadAdmin()}catch(e){beepError('เข้าสู่ระบบไม่สำเร็จ: '+e.message)}};
+$('#adminLoginBtn').onclick=async()=>{try{let r=await api('adminLogin',{email:$('#adminEmail').value,password:$('#adminPassword').value,remember:$('#rememberAdmin').checked});adminToken=r.token;$('#adminLogin').classList.add('hidden');$('#adminPanel').classList.remove('hidden');await loadAdmin();if(adminHeartbeatTimer)clearInterval(adminHeartbeatTimer);adminHeartbeatTimer=setInterval(()=>{if(adminToken)api('adminHeartbeat',{token:adminToken}).catch(error=>{const message=$('#adminAuditMessage');if(message&&isPrimaryAdmin)message.textContent='อัปเดตสถานะการใช้งานไม่สำเร็จ: '+error.message})},60000)}catch(e){beepError('เข้าสู่ระบบไม่สำเร็จ: '+e.message)}};
 $('#forgotBtn').onclick=()=>{
   showModal('<h2>🔐 ลืมรหัสผ่านผู้ดูแล</h2><p>กรอกอีเมลผู้ดูแลระบบที่ได้รับอนุญาต ระบบจะส่งรหัส OTP ไปยังอีเมลดังกล่าว</p><div class="field"><label>อีเมลผู้ดูแล</label><input id="forgotEmail" type="email" autocomplete="email" placeholder="admin@ku.th" required></div><p class="hint">รหัส OTP มีอายุ 5 นาที และใช้ได้ครั้งเดียว</p><div class="actions"><button class="btn-primary" id="sendOtpBtn">ส่งรหัส OTP</button></div>');
   $('#sendOtpBtn').onclick=async()=>{
@@ -544,7 +544,7 @@ $('#forgotBtn').onclick=()=>{
     }catch(err){btn.disabled=false;btn.textContent='ส่งรหัส OTP';beepError(err.message)}
   };
 };
-$('#logoutBtn').onclick=()=>{adminToken=null;approverSignatureDataUrl=null;const signaturePreview=$('#adminSignaturePreview'),deleteButton=$('#deleteAdminSignature');if(signaturePreview){signaturePreview.removeAttribute('src');signaturePreview.classList.add('hidden')}if(deleteButton)deleteButton.classList.add('hidden');$('#adminPanel').classList.add('hidden');$('#adminLogin').classList.remove('hidden');$('#adminPassword').value=''};
+$('#logoutBtn').onclick=async()=>{if(adminHeartbeatTimer){clearInterval(adminHeartbeatTimer);adminHeartbeatTimer=null}try{if(adminToken)await api('adminLogout',{token:adminToken})}catch(error){beepError('ออกจากระบบไม่สมบูรณ์: '+error.message)}finally{adminToken=null;isPrimaryAdmin=false;approverSignatureDataUrl=null;const signaturePreview=$('#adminSignaturePreview'),deleteButton=$('#deleteAdminSignature');if(signaturePreview){signaturePreview.removeAttribute('src');signaturePreview.classList.add('hidden')}if(deleteButton)deleteButton.classList.add('hidden');$('#adminPanel').classList.add('hidden');$('#adminLogin').classList.remove('hidden');$('#adminPassword').value=''}};
 $('#refreshAdmin').onclick=loadAdmin;
 function renderServiceChart(){
   const yearSelect=$('#statsYear'),monthSelect=$('#statsMonth'),periodSelect=$('#statsPeriod'),chart=$('#serviceChart'),years=[...new Set(adminData.map(b=>String(b.date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort((a,b)=>b.localeCompare(a));
@@ -665,6 +665,10 @@ function ensureAdminTools_(){
   if($('#adminTools')||$('#adminDashboardLayout'))return;
   const sections=document.createElement('section');sections.id='adminTools';sections.innerHTML='<section class="admin-feature"><h3>QR Code สำหรับแชร์เว็บไซต์</h3><p class="muted">สแกนเพื่อเปิดเว็บไซต์นี้</p><div class="admin-share"><img id="shareQr" alt="QR Code สำหรับเปิดเว็บไซต์"><div><p id="shareUrl" class="muted"></p><button type="button" class="btn-light" id="copyShareUrl">คัดลอกลิงก์เว็บไซต์</button><p id="shareQrMessage" class="hint" role="status"></p></div></div></section><section class="admin-feature"><h3>จัดการอีเมลแจ้งเตือน</h3><p class="muted">เพิ่มหรือนำอีเมลออกจากรายชื่อผู้รับแจ้งเตือนคำขอและการเปลี่ยนสถานะ</p><form id="adminEmailForm" class="grid"><div class="field"><label for="newAdminEmail">อีเมลที่ต้องการเพิ่ม</label><input id="newAdminEmail" type="email" required placeholder="staff@ku.th"></div><div class="field" style="justify-content:end"><button class="btn-primary" type="submit">เพิ่มอีเมล</button></div></form><div id="adminEmailMessage" class="hint" role="status"></div><div id="adminEmailList" class="admin-email-list"></div></section><section class="admin-feature"><h3>จัดการคลังผลงาน</h3><p class="muted">รูปที่เผยแพร่จะแสดงให้ผู้เข้าชมเว็บไซต์ทั่วไป และเก็บในโฟลเดอร์คลังผลงานบน Google Drive</p><form id="portfolioAdminForm" class="grid"><input id="portfolioEditId" type="hidden"><div class="field"><label for="portfolioAdminCategory">ประเภทงาน</label><select id="portfolioAdminCategory" required></select></div><div class="field"><label for="portfolioAdminTitle">ชื่อผลงาน</label><input id="portfolioAdminTitle" maxlength="120" required></div><div class="field full"><label for="portfolioAdminDescription">รายละเอียด</label><textarea id="portfolioAdminDescription" maxlength="1000"></textarea></div><div class="field full"><label for="portfolioAdminImage">รูปผลงาน (JPG, PNG, WebP ไม่เกิน 5 MB)</label><input id="portfolioAdminImage" type="file" accept="image/jpeg,image/png,image/webp"><span id="portfolioImageHint" class="hint">เลือกรูปเพื่อเพิ่มผลงานใหม่ หรือเลือกไฟล์ใหม่เพื่อแทนรูปเดิม</span></div><div class="actions"><button id="portfolioSaveButton" class="btn-primary" type="submit">เพิ่มผลงาน</button><button id="portfolioCancelEdit" class="btn-light hidden" type="button">ยกเลิกการแก้ไข</button></div></form><div id="portfolioAdminMessage" class="hint" role="status"></div><div id="portfolioAdminList" class="portfolio-admin-list"></div></section>';
   $('#adminPanel').appendChild(sections);
+  const auditPanel=document.createElement('section');auditPanel.id='adminAuditSection';auditPanel.className='admin-feature hidden';
+  auditPanel.innerHTML='<h3>ประวัติและสถานะผู้ดูแล</h3><p class="muted">ตรวจสอบได้เฉพาะอีเมลหลัก · แสดงผู้ดูแลที่ใช้งานในช่วง 2.5 นาทีที่ผ่านมาและประวัติการกระทำ</p><div id="adminActiveSessions" class="hint"></div><div class="actions"><button type="button" class="btn-light" id="refreshAdminAudit">รีเฟรชประวัติ</button></div><div id="adminAuditMessage" class="hint" role="status"></div><div id="adminAuditList" class="admin-email-list"></div>';
+  $('#adminPanel').appendChild(auditPanel);
+  $('#refreshAdminAudit').onclick=loadAdminAudit_;
   const signaturePanel=document.createElement('section');signaturePanel.className='admin-feature';signaturePanel.innerHTML='<h3>จัดการลายเซ็นผู้อนุมัติ</h3><p class="muted">ไฟล์จะจัดเก็บเป็นส่วนตัว และแสดงบนแบบ ส.1 เมื่อคำขอได้รับอนุมัติเท่านั้น</p><img id="adminSignaturePreview" class="admin-signature-preview hidden" alt="ตัวอย่างลายเซ็นผู้อนุมัติ"><form id="adminSignatureForm"><div class="field"><label for="adminSignatureFile">เลือกรูปลายเซ็น (PNG หรือ JPG ไม่เกิน 10 MB)</label><input id="adminSignatureFile" type="file" accept="image/png,image/jpeg" required></div><label class="checkline" style="margin-top:12px"><input id="signatureAuthorization" type="checkbox" required> ยืนยันว่าได้รับอนุญาตจากเจ้าของลายเซ็นให้ใช้ในเอกสารคำขอ</label><div class="actions"><button id="saveAdminSignature" class="btn-primary" type="submit">บันทึกลายเซ็น</button><button id="deleteAdminSignature" class="btn-danger hidden" type="button">ลบลายเซ็น</button></div></form><div id="adminSignatureMessage" class="hint" role="status" aria-live="polite"></div>';
   signaturePanel.id='adminSignatureSection';
   sections.prepend(signaturePanel);
@@ -672,9 +676,9 @@ function ensureAdminTools_(){
   const emailSection=sections.querySelector('#adminEmailForm').closest('.admin-feature');
   emailSection.id='adminEmailSection';
   emailSection.querySelector('h3').textContent='จัดการอีเมลแจ้งเตือนและผู้ดูแล';
-  emailSection.querySelector('p').textContent='ผู้ดูแลและผู้รับแจ้งเตือนต้องใช้อีเมลที่ลงท้ายด้วย @ku.th บัญชีใหม่จะต้องตั้งรหัสผ่านส่วนตัวผ่านเมนู “ลืมรหัสผ่าน” โดยยืนยัน OTP ก่อนเข้าใช้งาน';
+  emailSection.querySelector('p').textContent='อีเมลหลัก media.llldo@ku.th เท่านั้นที่เพิ่มหรือนำอีเมลผู้ดูแลอื่นออกได้ บัญชีใหม่ต้องตั้งรหัสผ่านผ่านเมนู “ลืมรหัสผ่าน” โดยยืนยัน OTP ก่อนเข้าใช้งาน';
   emailSection.querySelector('label[for="newAdminEmail"]').textContent='อีเมล KU สำหรับผู้ดูแล/ผู้รับแจ้งเตือน';
-  const emailNote=document.createElement('p');emailNote.className='hint';emailNote.textContent='ผู้ดูแลเดิมควรตั้งรหัสผ่านส่วนตัวผ่าน OTP เช่นกัน เพื่อแยกบัญชีและยกเลิกรหัสผ่านเดิมที่ใช้ร่วมกัน';
+  const emailNote=document.createElement('p');emailNote.className='hint';emailNote.textContent='ผู้ดูแลทุกบัญชีต้องตั้งรหัสผ่านส่วนตัวผ่าน OTP ก่อนเข้าใช้งาน เพื่อให้ระบุผู้กระทำแต่ละรายการได้';
   emailSection.querySelector('form').after(emailNote);
   const newAdminEmail=$('#newAdminEmail');newAdminEmail.title='กรุณาใช้อีเมลที่ลงท้ายด้วย @ku.th';
   sections.querySelector('#portfolioAdminForm').closest('.admin-feature').id='adminPortfolioSection';
@@ -778,15 +782,33 @@ async function deleteAdminSignatureFromDashboard_(){
 }
 function renderAdminEmails(){
   const list=$('#adminEmailList');if(!list)return;list.replaceChildren();
+  const form=$('#adminEmailForm');if(form)form.classList.toggle('hidden',!isPrimaryAdmin);
   adminEmails.forEach(email=>{
     const row=document.createElement('div'),label=document.createElement('span'),account=document.createElement('span'),remove=document.createElement('button');
     row.className='admin-email-item';label.textContent=email;account.className='admin-account-state';
-    account.textContent=adminPasswordSetupRequired.includes(email)?'ต้องตั้งรหัสผ่านส่วนตัวผ่าน “ลืมรหัสผ่าน”':adminPasswordConfiguredEmails.includes(email)?'ตั้งรหัสผ่านส่วนตัวแล้ว':'ยังใช้รหัสผ่านเดิม · ตั้งส่วนตัวได้ที่ “ลืมรหัสผ่าน”';
-    remove.type='button';remove.className='btn-danger';remove.textContent='นำออก';remove.disabled=adminEmails.length<=1;
+    account.textContent=email==='media.llldo@ku.th'?(adminPasswordConfiguredEmails.includes(email)?'อีเมลหลัก · ตั้งรหัสผ่านแล้ว':'อีเมลหลัก · ต้องตั้งรหัสผ่านผ่าน “ลืมรหัสผ่าน”'):adminPasswordSetupRequired.includes(email)||!adminPasswordConfiguredEmails.includes(email)?'ต้องตั้งรหัสผ่านส่วนตัวผ่าน “ลืมรหัสผ่าน”':'ตั้งรหัสผ่านส่วนตัวแล้ว';
+    remove.type='button';remove.className='btn-danger';remove.textContent='นำออก';remove.disabled=!isPrimaryAdmin||email==='media.llldo@ku.th'||adminEmails.length<=1;remove.classList.toggle('hidden',!isPrimaryAdmin||email==='media.llldo@ku.th');
     remove.onclick=async()=>{if(!confirm('นำ '+email+' ออกจากรายชื่อผู้รับแจ้งเตือน?'))return;remove.disabled=true;try{const result=await api('removeAdminEmail',{token:adminToken,email});adminEmails=result.emails||[];renderAdminEmails();$('#adminEmailMessage').textContent='นำอีเมลออกเรียบร้อยแล้ว'}catch(error){remove.disabled=false;$('#adminEmailMessage').textContent='นำอีเมลออกไม่สำเร็จ: '+error.message}};
     row.append(label,account,remove);list.appendChild(row);
   });
   if(!adminEmails.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='ยังไม่มีอีเมลผู้รับแจ้งเตือน';list.appendChild(empty)}
+  const auditPanel=$('#adminAuditSection');if(auditPanel)auditPanel.classList.toggle('hidden',!isPrimaryAdmin);
+}
+async function loadAdminAudit_(){
+  const active=$('#adminActiveSessions'),list=$('#adminAuditList'),message=$('#adminAuditMessage');
+  if(!isPrimaryAdmin||!active||!list||!message)return;
+  message.textContent='กำลังโหลดประวัติ...';list.replaceChildren();
+  try{
+    const response=await api('adminAudit',{token:adminToken});
+    const sessions=response.activeSessions||[];
+    active.textContent=sessions.length?'กำลังใช้งาน: '+sessions.map(session=>session.email+' (ใช้งานล่าสุด '+new Date(session.lastSeenAt).toLocaleString('th-TH')+')').join(' · '):'ไม่มีผู้ดูแลที่ใช้งานในช่วง 2.5 นาทีที่ผ่านมา';
+    (response.events||[]).forEach(event=>{
+      const row=document.createElement('div'),summary=document.createElement('span'),detail=document.createElement('span');
+      row.className='admin-email-item';summary.textContent=new Date(event.timestamp).toLocaleString('th-TH')+' · '+event.actor+' · '+event.action+(event.target?' · '+event.target:'');
+      detail.className='admin-account-state';detail.textContent=event.details||'';row.append(summary,detail);list.appendChild(row);
+    });
+    message.textContent='แสดง '+(response.events||[]).length+' รายการล่าสุด';
+  }catch(error){message.textContent='โหลดประวัติไม่สำเร็จ: '+error.message}
 }
 async function loadAdminPortfolio_(){
   const list=$('#portfolioAdminList'),message=$('#portfolioAdminMessage');if(!list)return;
@@ -884,8 +906,9 @@ async function loadPortfolio(){
 }
 async function loadAdmin(){
   try{
-    const r=await api('adminList',{token:adminToken});adminData=r.bookings||[];adminEmails=r.adminEmails||[];adminPasswordSetupRequired=r.passwordSetupRequired||[];adminPasswordConfiguredEmails=r.passwordConfiguredEmails||[];
+    const r=await api('adminList',{token:adminToken});adminData=r.bookings||[];adminEmails=r.adminEmails||[];adminPasswordSetupRequired=r.passwordSetupRequired||[];adminPasswordConfiguredEmails=r.passwordConfiguredEmails||[];isPrimaryAdmin=Boolean(r.isPrimaryAdmin);
     ensureAdminTools_();renderAdminEmails();await loadAdminSignature_();
+    if(isPrimaryAdmin)await loadAdminAudit_();
     $('#kAll').textContent=adminData.length;
     $('#kPending').textContent=adminData.filter(x=>x.status==='Pending').length;
     $('#kApproved').textContent=adminData.filter(x=>['Approved / Quoted','In Progress'].includes(x.status)).length;
