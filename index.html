@@ -35,6 +35,10 @@
 .admin-share img{width:190px;height:190px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:10px}
 .stats-controls{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
 .stats-controls .field{min-width:125px}
+.time-range-field{border:1px solid var(--line);border-radius:8px;padding:12px}
+.time-range-heading{display:block;margin-bottom:8px;color:var(--ink)}
+.time-range-box{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.time-range-box label{font-size:12px;color:var(--muted)}
 @media(max-width:650px){.portfolio-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}.portfolio-card img{height:300px}.portfolio-image-modal{padding:18px}.portfolio-image-close{top:-12px;right:-12px;width:40px;height:40px}.admin-feature{padding:14px}.admin-share img{width:150px;height:150px}}
 </style></head><body>
 <style>
@@ -170,9 +174,9 @@ td,th{font-size:14px}
 <div class="field"><label>ภายใต้โครงการ (ถ้ามี)</label><input name="project" placeholder="ชื่อโครงการ"></div>
 <div class="field"><label for="serviceLocation">สถานที่ให้บริการ</label><select name="location" id="serviceLocation"><option value="สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.">สำนักพัฒนาการเรียนรู้ตลอดชีวิต มก.</option><option value="หน่วยงานภายในมหาวิทยาลัยเกษตรศาสตร์">หน่วยงานภายในมหาวิทยาลัยเกษตรศาสตร์</option><option value="นอกสถานที่ (กรุงเทพมหานคร)">นอกสถานที่ (กรุงเทพมหานคร)</option><option value="นอกสถานที่ (ต่างจังหวัด)">นอกสถานที่ (ต่างจังหวัด)</option><option value="ออนไลน์">ออนไลน์</option><option value="อื่นๆ">อื่น ๆ</option></select></div>
 <div class="field location-detail hidden" id="locationDetailField"><label for="locationDetail">ระบุชื่อหน่วยงานหรือสถานที่</label><input id="locationDetail" name="locationDetail" maxlength="200" placeholder="ระบุชื่อหน่วยงานหรือสถานที่"></div>
-<div class="field full"><div class="grid">
-<div class="field"><label>เวลาเริ่มต้น <span class="required">*</span></label><input type="time" name="start" required></div>
-<div class="field"><label>เวลาสิ้นสุด <span class="required">*</span></label><input type="time" name="end" required></div>
+<div class="field full time-range-field"><label class="time-range-heading">ช่วงเวลาใช้บริการ <span class="required">*</span></label><div class="time-range-box">
+<div class="field"><label for="serviceStart">เวลาเริ่มต้น</label><input id="serviceStart" type="time" name="start" required></div>
+<div class="field"><label for="serviceEnd">เวลาสิ้นสุด</label><input id="serviceEnd" type="time" name="end" required></div>
 </div></div>
 <div class="field full"><label>รายละเอียดงาน / ความต้องการพิเศษ / เทคนิคที่ต้องการ</label><textarea name="requirements" placeholder="รายละเอียดรูปแบบงาน จำนวนผู้เข้าร่วม อุปกรณ์หรือเทคนิคพิเศษ ฯลฯ"></textarea></div></div></div>
 <div class="panel"><h2 class="section-title"><span class="num">02</span> เลือกประเภทบริการผลิตและบริการสื่อ</h2><p class="hint">เลือกได้มากกว่า 1 รายการตามความต้องการ ระบบจะคำนวณราคาเบื้องต้นให้อัตโนมัติ</p>
