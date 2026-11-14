@@ -119,7 +119,7 @@
 .admin-email-item .admin-account-state{flex:1}
 .admin-calendar-events{display:grid;gap:4px}
 #adminCalendarMessage.error,#adminCalendarFormMessage.error{color:var(--red)}
-.admin-calendar-management{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(270px,1fr);gap:16px;align-items:start}
+.admin-calendar-management{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 .admin-calendar-panel,.admin-calendar-admin{min-width:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe}
 .admin-calendar-panel .calendar-toolbar{margin-top:0}
 .admin-calendar-admin h4:first-child{margin-top:0}
@@ -146,8 +146,8 @@ td,th{font-size:14px}
 .calendar-booking,.calendar-booking-time{font-size:13px}
 .calendar-message{font-size:14px}
 @media(max-width:650px){.chart-row{grid-template-columns:minmax(105px,1fr) minmax(70px,1fr) 38px;gap:8px}.chart-label{font-size:13px}.admin-chart{padding:14px}}
-@media(max-width:800px){.admin-dashboard-workspace{grid-template-columns:180px minmax(0,1fr)}.admin-sidebar{position:sticky;top:16px;display:grid;overflow:visible;background:#fff;box-shadow:0 4px 12px #173c5a14}.admin-dashboard-content>[data-dashboard-page]{padding:14px}.admin-calendar-management{grid-template-columns:1fr}}
-@media(max-width:540px){.admin-dashboard-workspace{grid-template-columns:1fr}.admin-sidebar{position:sticky;top:0;z-index:3}.admin-calendar-management{grid-template-columns:1fr}}
+@media(max-width:800px){.admin-dashboard-workspace{grid-template-columns:180px minmax(0,1fr)}.admin-sidebar{position:sticky;top:16px;display:grid;overflow:visible;background:#fff;box-shadow:0 4px 12px #173c5a14}.admin-dashboard-content>[data-dashboard-page]{padding:14px}}
+@media(max-width:540px){.admin-dashboard-workspace{grid-template-columns:1fr}.admin-sidebar{position:sticky;top:0;z-index:3}}
 .brand-logos{display:flex;align-items:center;gap:8px;flex:none}
 .brand-logo-ku,.brand-logo-spro{display:block;object-fit:contain;flex:none}
 .brand-logo-ku{width:84px;height:84px;filter:drop-shadow(0 0 2px #ffffff66)}
@@ -556,9 +556,14 @@ function setupAdminCalendar_(){
       const savedEvent=result.event,savedDate=savedEvent.date;
       form.reset();date.value=savedDate;month.value=savedDate.slice(0,7);
       const bookings=await loadAdminCalendar_();
-      if(bookings&&bookings.some(item=>item.id===savedEvent.id)){message.textContent='เพิ่มรายการกันคิวเรียบร้อยแล้ว และแสดงในปฏิทินแล้ว'}
-      else if(bookings){message.classList.add('error');message.textContent='ระบบตอบรับการบันทึกแล้ว แต่ยังไม่พบรายการในปฏิทิน กรุณารีเฟรชเพื่อตรวจสอบอีกครั้ง'}
-      else{message.classList.add('error');message.textContent='บันทึกรายการแล้ว แต่โหลดปฏิทินเพื่อตรวจสอบไม่สำเร็จ'}
+      const savedEventVisible=bookings&&bookings.some(item=>item.id===savedEvent.id);
+      if(!savedEventVisible){
+        const displayedBookings=bookings?bookings.concat(savedEvent):[savedEvent];
+        renderCalendar_(month.value,displayedBookings,{list:$('#adminCalendarList'),message:$('#adminCalendarMessage'),title:$('#adminCalendarMonthTitle'),bookingCount:$('#adminCalendarBookingCount'),dayCount:$('#adminCalendarDayCount')});
+        renderAdminCalendarEvents_(displayedBookings.filter(item=>item.eventType==='block'));
+      }
+      if(savedEventVisible){message.textContent='เพิ่มรายการกันคิวเรียบร้อยแล้ว และแสดงในปฏิทินแล้ว'}
+      else{message.classList.add('error');message.textContent='ระบบรับรายการแล้วและแสดงในปฏิทินแล้ว แต่ดึงข้อมูลกลับมายืนยันไม่ได้ กรุณาตรวจสอบการเชื่อมต่อระบบ'}
       if(!$('#calendar').classList.contains('hidden'))loadCalendar()
     }catch(error){message.classList.add('error');message.textContent='เพิ่มรายการไม่สำเร็จ: '+error.message}
     finally{button.disabled=false}

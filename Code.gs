@@ -275,7 +275,7 @@ function publicCalendarItems_(month){
   const bookings=all_().filter(b=>b.date.slice(0,7)===month&&['Approved / Quoted','In Progress'].includes(b.status)).map(b=>({id:b.id,date:b.date,start:b.start,end:b.end,serviceNames:b.serviceNames,services:b.services,eventType:'booking'}));
   const sheet=calendarEventsSheet_(false);
   if(!sheet||sheet.getLastRow()<2)return bookings;
-  const events=sheet.getRange(2,1,sheet.getLastRow()-1,8).getValues().filter(row=>String(row[1]||'').slice(0,7)===month).map(row=>({id:String(row[0]),date:dateString_(row[1]),start:timeString_(row[2]),end:timeString_(row[3]),title:String(row[4]||''),notes:String(row[5]||''),eventType:'block'}));
+  const events=sheet.getRange(2,1,sheet.getLastRow()-1,8).getValues().filter(row=>dateString_(row[1]).slice(0,7)===month).map(row=>({id:String(row[0]),date:dateString_(row[1]),start:timeString_(row[2]),end:timeString_(row[3]),title:String(row[4]||''),notes:String(row[5]||''),eventType:'block'}));
   return bookings.concat(events);
 }
 function createCalendarEvent_(q){
@@ -285,6 +285,7 @@ function createCalendarEvent_(q){
   if(!title||title.length>120||notes.length>500)throw new Error('ชื่อรายการต้องมี 1–120 ตัวอักษร และหมายเหตุไม่เกิน 500 ตัวอักษร');
   const sheet=calendarEventsSheet_(true),id='EV-'+Utilities.getUuid();
   sheet.appendRow([id,date,start,end,title,notes,actor,new Date()].map(sheetSafeValue_));
+  SpreadsheetApp.flush();
   recordAdminAudit_(actor,'เพิ่มรายการกันคิว',id,title+' · '+date+' '+start+'-'+end);
   return {ok:true,event:{id,date,start,end,title,notes,eventType:'block'}};
 }
