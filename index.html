@@ -119,6 +119,13 @@
 .admin-email-item .admin-account-state{flex:1}
 .admin-calendar-events{display:grid;gap:4px}
 #adminCalendarMessage.error,#adminCalendarFormMessage.error{color:var(--red)}
+.admin-calendar-management{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(270px,1fr);gap:16px;align-items:start}
+.admin-calendar-panel,.admin-calendar-admin{min-width:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe}
+.admin-calendar-panel .calendar-toolbar{margin-top:0}
+.admin-calendar-admin h4:first-child{margin-top:0}
+.admin-calendar-admin .grid{grid-template-columns:1fr}
+.admin-calendar-admin .actions{margin-top:0}
+#adminCalendarFormMessage{line-height:1.6}
 .password-input-wrap{position:relative;width:100%}
 .password-input-wrap input{padding-right:44px}
 .password-toggle{position:absolute;top:50%;right:8px;display:grid;place-items:center;width:30px;height:30px;padding:4px;transform:translateY(-50%);border:0;border-radius:6px;background:transparent;color:var(--muted)}
@@ -139,7 +146,8 @@ td,th{font-size:14px}
 .calendar-booking,.calendar-booking-time{font-size:13px}
 .calendar-message{font-size:14px}
 @media(max-width:650px){.chart-row{grid-template-columns:minmax(105px,1fr) minmax(70px,1fr) 38px;gap:8px}.chart-label{font-size:13px}.admin-chart{padding:14px}}
-@media(max-width:800px){.admin-dashboard-workspace{grid-template-columns:1fr}.admin-sidebar{position:sticky;z-index:3;top:0;display:flex;overflow-x:auto;background:#fff;box-shadow:0 4px 12px #173c5a14}.admin-sidebar button{flex:none;white-space:nowrap}.admin-dashboard-content>[data-dashboard-page]{padding:14px}}
+@media(max-width:800px){.admin-dashboard-workspace{grid-template-columns:180px minmax(0,1fr)}.admin-sidebar{position:sticky;top:16px;display:grid;overflow:visible;background:#fff;box-shadow:0 4px 12px #173c5a14}.admin-dashboard-content>[data-dashboard-page]{padding:14px}.admin-calendar-management{grid-template-columns:1fr}}
+@media(max-width:540px){.admin-dashboard-workspace{grid-template-columns:1fr}.admin-sidebar{position:sticky;top:0;z-index:3}.admin-calendar-management{grid-template-columns:1fr}}
 .brand-logos{display:flex;align-items:center;gap:8px;flex:none}
 .brand-logo-ku,.brand-logo-spro{display:block;object-fit:contain;flex:none}
 .brand-logo-ku{width:84px;height:84px;filter:drop-shadow(0 0 2px #ffffff66)}
@@ -513,10 +521,12 @@ async function loadAdminCalendar_(){
     const bookings=response.bookings||[];
     renderCalendar_(month,bookings,{list:$('#adminCalendarList'),message,title:$('#adminCalendarMonthTitle'),bookingCount:$('#adminCalendarBookingCount'),dayCount:$('#adminCalendarDayCount')});
     renderAdminCalendarEvents_(bookings.filter(item=>item.eventType==='block'));
+    return bookings;
   }catch(error){
     if(request!==adminCalendarRequest)return;
     message.classList.add('error');message.textContent='โหลดปฏิทินไม่สำเร็จ: '+error.message;
-    $('#adminCalendarList').replaceChildren();$('#adminCalendarBookingCount').textContent='—';$('#adminCalendarDayCount').textContent='—';$('#adminCalendarEventList').replaceChildren()
+    $('#adminCalendarList').replaceChildren();$('#adminCalendarBookingCount').textContent='—';$('#adminCalendarDayCount').textContent='—';$('#adminCalendarEventList').replaceChildren();
+    return null
   }
 }
 function renderAdminCalendarEvents_(events){
@@ -532,18 +542,25 @@ function renderAdminCalendarEvents_(events){
 }
 function setupAdminCalendar_(){
   const month=$('#adminCalendarMonth'),date=$('#adminCalendarEventDate');
-  month.value=$('#calendarMonth').value||monthValue_(new Date());date.value=new Date().toISOString().slice(0,10);
+  const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  month.value=$('#calendarMonth').value||monthValue_(now);date.value=today;
   $('#adminCalendarPrev').onclick=()=>shiftAdminCalendarMonth_(-1);$('#adminCalendarNext').onclick=()=>shiftAdminCalendarMonth_(1);
   $('#adminCalendarToday').onclick=()=>{month.value=monthValue_(new Date());loadAdminCalendar_()};
   month.onchange=loadAdminCalendar_;
   $('#adminCalendarEventForm').onsubmit=async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),message=$('#adminCalendarFormMessage');
-    button.disabled=true;message.textContent='กำลังเพิ่มรายการกันคิว...';
+    button.disabled=true;message.classList.remove('error');message.textContent='กำลังเพิ่มรายการกันคิว...';
     try{
-      await api('createCalendarEvent',{token:adminToken,date:date.value,start:$('#adminCalendarStart').value,end:$('#adminCalendarEnd').value,title:$('#adminCalendarTitle').value.trim(),notes:$('#adminCalendarNotes').value.trim()});
-      message.textContent='เพิ่มรายการกันคิวเรียบร้อยแล้ว';const savedDate=date.value;form.reset();date.value=savedDate;month.value=savedDate.slice(0,7);await loadAdminCalendar_();
+      const result=await api('createCalendarEvent',{token:adminToken,date:date.value,start:$('#adminCalendarStart').value,end:$('#adminCalendarEnd').value,title:$('#adminCalendarTitle').value.trim(),notes:$('#adminCalendarNotes').value.trim()});
+      if(!result.ok||!result.event||!result.event.id)throw new Error('เซิร์ฟเวอร์ไม่ได้ยืนยันการบันทึกรายการ');
+      const savedEvent=result.event,savedDate=savedEvent.date;
+      form.reset();date.value=savedDate;month.value=savedDate.slice(0,7);
+      const bookings=await loadAdminCalendar_();
+      if(bookings&&bookings.some(item=>item.id===savedEvent.id)){message.textContent='เพิ่มรายการกันคิวเรียบร้อยแล้ว และแสดงในปฏิทินแล้ว'}
+      else if(bookings){message.classList.add('error');message.textContent='ระบบตอบรับการบันทึกแล้ว แต่ยังไม่พบรายการในปฏิทิน กรุณารีเฟรชเพื่อตรวจสอบอีกครั้ง'}
+      else{message.classList.add('error');message.textContent='บันทึกรายการแล้ว แต่โหลดปฏิทินเพื่อตรวจสอบไม่สำเร็จ'}
       if(!$('#calendar').classList.contains('hidden'))loadCalendar()
-    }catch(error){message.textContent='เพิ่มรายการไม่สำเร็จ: '+error.message}
+    }catch(error){message.classList.add('error');message.textContent='เพิ่มรายการไม่สำเร็จ: '+error.message}
     finally{button.disabled=false}
   };
   loadAdminCalendar_()
@@ -674,9 +691,11 @@ function createAdminCalendarPanel_(){
   section.id='adminCalendarSection';
   section.className='admin-dashboard-view';
   section.innerHTML=`<h3>ปฏิทินคิวบริการ</h3><p class="muted">เพิ่มรายการกันคิวจากแดชบอร์ด รายการจะแสดงชื่อและเวลาในปฏิทินสาธารณะ แต่ไม่ถือเป็นคำขอใช้บริการ</p>
+    <div class="admin-calendar-management"><div class="admin-calendar-panel">
     <div class="calendar-toolbar"><div class="calendar-controls"><button type="button" class="btn-light" id="adminCalendarPrev" aria-label="เดือนก่อนหน้า">‹</button><button type="button" class="btn-light" id="adminCalendarToday">วันนี้</button><button type="button" class="btn-light" id="adminCalendarNext" aria-label="เดือนถัดไป">›</button><strong id="adminCalendarMonthTitle" class="calendar-month-title" aria-live="polite"></strong></div><div class="field"><label for="adminCalendarMonth">เลือกเดือน</label><input id="adminCalendarMonth" type="month"></div></div>
     <div class="calendar-stats"><div class="calendar-stat"><strong id="adminCalendarBookingCount">—</strong>รายการในปฏิทิน</div><div class="calendar-stat"><strong id="adminCalendarDayCount">—</strong>วันที่มีรายการ</div></div>
     <div id="adminCalendarMessage" class="hint" role="status"></div><div class="calendar-scroll"><div id="adminCalendarList" class="calendar-grid" role="grid" aria-label="ปฏิทินคิวบริการสำหรับผู้ดูแล"></div></div>
+    </div><div class="admin-calendar-admin">
     <h4>เพิ่มรายการกันคิว</h4><form id="adminCalendarEventForm" class="grid">
       <div class="field"><label for="adminCalendarTitle">ชื่อรายการ</label><input id="adminCalendarTitle" maxlength="120" required placeholder="เช่น ปิดปรับปรุงห้องสตูดิโอ"></div>
       <div class="field"><label for="adminCalendarEventDate">วันที่</label><input id="adminCalendarEventDate" type="date" required></div>
@@ -685,7 +704,7 @@ function createAdminCalendarPanel_(){
       <div class="field full"><label for="adminCalendarNotes">หมายเหตุ (สำหรับผู้ดูแล)</label><input id="adminCalendarNotes" maxlength="500"></div>
       <div class="actions"><button class="btn-primary" type="submit">เพิ่มรายการกันคิว</button></div>
     </form><div id="adminCalendarFormMessage" class="hint" role="status"></div>
-    <h4>รายการกันคิวที่เพิ่มเองในเดือนนี้</h4><div id="adminCalendarEventList" class="admin-calendar-events"></div>`;
+    <h4>รายการกันคิวที่เพิ่มเองในเดือนนี้</h4><div id="adminCalendarEventList" class="admin-calendar-events"></div></div></div>`;
   $('#adminPanel').appendChild(section);
 }
 function setupAdminDashboardLayout_(){
@@ -784,7 +803,6 @@ function ensureAdminTools_(){
   $('#surveyShareUrl').textContent=surveyUrl;surveyQr.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(surveyUrl);
   surveyQr.onerror=()=>{$('#surveyShareMessage').textContent='สร้าง QR Code ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'};
   $('#copySurveyShareUrl').onclick=async()=>{try{await navigator.clipboard.writeText(surveyUrl);$('#surveyShareMessage').textContent='คัดลอกลิงก์แล้ว'}catch(error){$('#surveyShareMessage').textContent='คัดลอกอัตโนมัติไม่ได้ กรุณาคัดลอกลิงก์ที่แสดงด้านบน'}};
-  $('#exportSurveyCsv').onclick=exportAdminSurveyCsv_;
   const categorySelect=$('#portfolioAdminCategory');
   Object.entries(portfolioCategories).forEach(([id,label])=>{const option=document.createElement('option');option.value=id;option.textContent=label;categorySelect.appendChild(option)});
   $('#adminEmailForm').onsubmit=async event=>{
@@ -799,6 +817,7 @@ function ensureAdminTools_(){
   $('#deleteAdminSignature').onclick=deleteAdminSignatureFromDashboard_;
   setupAdminCalendar_();
   setupAdminDashboardLayout_();
+  $('#exportSurveyCsv').onclick=exportAdminSurveyCsv_;
   loadAdminPortfolio_();
 }
 async function loadAdminSignature_(){
